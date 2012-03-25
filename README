@@ -1,1 +1,34 @@
-Popular and specialized sorting algorithms written in D
+Phobos is the standard library for the D programming language. The stable sort in Phobos is slow, broken, and not even stable. The unstable sort runs great but has a few bad cases where it performs poorly. I wrote these modules as alternatives, and possibly replacements, for the sort function in Phobos.
+
+stablesort.d:
+	A natural merge sort using O(log n log n) additional space. Up to 1KiB may be allocated on the stack, and anything larger will be allocated on the heap.
+	
+	A natural merge sort scans the list from left to right, looking for "runs" in ascending or descending order and merging them. A 'run' is a sublist of elements that is already sorted. If elements are in descending order, it will reverse them.
+	
+	If a run is too small, a binary insertion sort is used to build the run up to MIN_RUN length (32 elements long).
+	
+	When merging, the smaller of the two halves is copied into temporary memory and then merged in place. It may need to merge from front to back, or back to fromt, depending on which half is smaller.
+	
+	Rotations are used to reduce two runs into four smaller runs. It's difficult to explain how or why this works. This is done recursively until the runs are small enough to fit into the additional space.
+	
+	An optional template argument, in-place, when set to true, utilizes no additional space at the cost of performance. In-place merging is done using insertions rather than temporary memory.
+
+
+unstablesort.d:
+	A custom quick sort / intro sort implementation. Tail calls are used on the larger partition to avoid stack overflows.
+	
+	Quick sort uses a median of three to choose the pivot. The partitioning method used works well when many elements are equal to the pivot.
+	
+	Binary insertion sort is used to sort small sublists.
+	
+	After too many recursions, shell sort is used to avoid the worst-case of quick sort. It uses the best known gap sequence.
+	
+	
+forwardsort.d:
+	A custom quick sort implementation especially for sorting forward ranges in place.
+	
+	Due to limitations in forward ranges, the first element is used as the pivot. This uses what I like to call the "caterpillar tracks" method for partitioning the list.
+	
+	Binary insertion sort is used to sort small sublists. Up to 32 elements are copied into a temporary array on the stack, sorted, and copied back.
+	
+	After too many recursions, comb sort is used to avoid the worst-case of quick sort. Comb sort works well with forward ranges, and although it still has a worst-case of O(n^2), it's far less likely to happen.
