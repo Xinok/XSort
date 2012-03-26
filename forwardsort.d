@@ -4,8 +4,12 @@
 	Written and tested for DMD 2.058 and Phobos
 	
 	Authors:  Xinok
-	Date:     March 2012
 	License:  Public Domain
+	
+	Bugs:
+	Has potential worst-case performance of O(n^2)
+	
+	CTFE results in out-of-memory error
 ++/
 
 module forwardsort;
@@ -45,7 +49,10 @@ template ForwardSortImpl(alias pred, R)
 	static assert(!isInfinite!R);
 	
 	alias ElementType!R T;
+	
 	alias binaryFun!pred less;
+	bool lessEqual(T a, T b){ return !less(b, a); }
+	
 	enum MAX_INSERT = 1024 / T.sizeof <= 32 ? 1024 / T.sizeof : 32;
 	
 	/// Entry sort function
@@ -99,9 +106,10 @@ template ForwardSortImpl(alias pred, R)
 		R rig = range.save;
 		rig.popFront();
 		
-		size_t mid = 0;
-		for(size_t i = 1; i < len; ++i)
+		size_t i = 1, mid = 0;
+		while(true)
 		{
+			if(i >= len) break;
 			if(less(rig.front, pivot))
 			{
 				++mid;
@@ -109,6 +117,17 @@ template ForwardSortImpl(alias pred, R)
 				swap(lef.front, rig.front);
 			}
 			rig.popFront();
+			++i;
+			
+			if(i >= len) break;
+			if(lessEqual(rig.front, pivot))
+			{
+				++mid;
+				lef.popFront();
+				swap(lef.front, rig.front);
+			}
+			rig.popFront();
+			++i;
 		}
 		
 		swap(range.front, lef.front);
@@ -228,6 +247,7 @@ unittest
 	assert(testCall(test) == 0);
 	
 	// CTFE Test
+	//@ Disabled as it results in an out-of-memory error
 	version(none)
 	{
 		enum result = testCall(test);
