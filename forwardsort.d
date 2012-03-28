@@ -7,7 +7,7 @@
 	License:  Public Domain
 	
 	Bugs:
-	Has potential worst-case performance of O(n^2)
+	Worst case performance of O(n^2)
 	
 	CTFE results in out-of-memory error
 ++/
@@ -18,28 +18,27 @@ private import std.range       : isForwardRange, isInfinite, hasAssignableElemen
 private import std.algorithm   : isSorted, swap;
 private import std.functional  : binaryFun;
 private import std.array       : save, front, popFront, empty;
-// private import std.parallelism : task, taskPool, defaultPoolThreads;
+private import std.parallelism : task, taskPool, defaultPoolThreads;
 
 /++
 	Performs an unstable sort on a forward range according to predicate less.
-	The algorithm is a quick sort which resorts to comb sort to avoid worst-case.
-	
-	Returns: Sorted input as SortedRange
+	The algorithm is a quick sort which resorts to comb sort to avoid worst case performance.
 	
 	Examples:
 	-----------------
 	int[] array = [10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70];
 	forwardSort(array);
 	forwardSort!"a > b"(array); // Sorts array descending
+	forwardSort(array, true);   // Sorts array using multiple threads
 	-----------------
 ++/
-void forwardSort(alias pred = "a < b", R)(R range)
+void forwardSort(alias less = "a < b", R)(R range, bool threaded = false)
 {
 	static assert(isForwardRange!R);
 	static assert(!isInfinite!R);
 	
-	ForwardSortImpl!(pred, R).sort(range);
-	if(!__ctfe) assert(isSorted!(pred)(range.save), "Range is not sorted");
+	ForwardSortImpl!(less, R).sort(range, threaded);
+	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
 }
 
 /// Implementation of unstable sort for forward ranges
@@ -53,13 +52,42 @@ template ForwardSortImpl(alias pred, R)
 	alias binaryFun!pred less;
 	bool lessEqual(T a, T b){ return !less(b, a); }
 	
-	enum MAX_INSERT = 1024 / T.sizeof <= 32 ? 1024 / T.sizeof : 32;
+	enum MAX_INSERT = 1024 / T.sizeof <= 32 ? 1024 / T.sizeof : 32; // Max length of buffer for insertion sort
+	enum MIN_THREAD = 1024 * 64; // The minimum length of a sublist to initiate a new thread
 	
 	/// Entry sort function
-	void sort(R range)
+	void sort(R range, bool threaded)
 	{
 		immutable len = walkLength(range.save);
-		forwardQuickSort(range, len, len);
+		if(threaded && !__ctfe) concSort(range, len, len);
+		else forwardQuickSort(range, len, len);
+	}
+	
+	/// Concurrently sorts range
+	void concSort(R range, size_t len, real depth)
+	{
+		if(len < MAX_INSERT)
+		{
+			binaryInsertionSort(range, len);
+			return;
+		}
+		if(depth <= 1.0)
+		{
+			forwardCombSort(range, len);
+			return;
+		}
+		
+		depth /= 2.0;
+		depth += depth / 2.0;
+		
+		size_t mid;
+		R lef;
+		partition(range, len, mid, lef);
+		
+		auto th = task!(concSort)(lef.save, len - mid - 1, depth);
+		taskPool.put(th);
+		concSort(range.save, mid, depth);
+		th.workForce();
 	}
 	
 	/// Performs a quick sort on a forward range
@@ -85,7 +113,7 @@ template ForwardSortImpl(alias pred, R)
 			R lef;
 			partition(range, len, mid, lef);
 			
-			if(mid < len / 2)
+			if(mid <= len / 2)
 			{
 				forwardQuickSort(lef.save, len - mid - 1, depth);
 				len = mid;
