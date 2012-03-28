@@ -4,7 +4,6 @@
 	Written and tested for DMD 2.058 and Phobos
 	
 	Authors:  Xinok
-	Date:     March 2012
 	License:  Public Domain
 ++/
 
@@ -38,6 +37,7 @@ private import std.math;       // pow
 	int[] array = [10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70];
 	unstableSort(array);
 	unstableSort!"a > b"(array); // Sorts array descending
+	unstableSort(array, true);   // Sorts array using multiple threads
 	-----------------
 ++/
 @trusted SortedRange!(R, less) unstableSort(alias less = "a < b", R)(R range, bool threaded = false)
@@ -75,7 +75,7 @@ template UnstableSortImpl(alias pred, R)
 	/// Entry sort function
 	void sort(R range, bool threaded = false)
 	{
-		if(threaded) concSort(range, range.length);
+		if(threaded && !__ctfe) concSort(range, range.length);
 		else sort(range, range.length);
 	}
 	
@@ -116,7 +116,7 @@ template UnstableSortImpl(alias pred, R)
 	/// Concurrently sorts range
 	void concSort(R range, real depth)
 	{
-		if(range.length <= MIN_THREAD)
+		if(range.length < MIN_THREAD)
 		{
 			sort(range, depth);
 			return;
