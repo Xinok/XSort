@@ -4,8 +4,9 @@
 	Written and tested for DMD 2.058 and Phobos
 	
 	Authors:  Xinok
-	Date:     March 2012
 	License:  Public Domain
+	
+	Bugs: CTFE doesn't work under DMD
 ++/
 
 module stablesort;
@@ -42,6 +43,14 @@ private import std.parallelism : task, taskPool, defaultPoolThreads;
 	int[] array = [10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70];
 	stableSort(array);
 	stableSort!"a > b"(array); // Sorts array descending
+	stableSort(array, true)    // Sorts array using multiple threads
+	
+	stableSort!("a < b", true)(array);       // Sorts array in-place
+	stableSort!("a < b", true)(array, true); // Sorts array in-place using multiple threads
+	
+	int[] temp;
+	temp.length = 64;
+	stableSort(array, false, temp); // Sorts array using temporary memory provided by user
 	-----------------
 ++/
 @trusted SortedRange!(R, less) stableSort(alias less = "a < b", bool inPlace = false, R)(R range, bool threaded = false, ElementType!(R)[] temp = null)
