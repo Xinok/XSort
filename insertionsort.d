@@ -61,10 +61,10 @@ import std.range, std.algorithm, std.functional, std.array;
 	Examples:
 	-----------------
 	int[] array = [10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70];
-	insertionSort(array, SearchPolicy.binarySearch); // Sort array utilizing binary search
+	insertionSort!("a < b", SearchPolicy.binarySearch)(array); // Sort array utilizing binary search
 	-----------------
 ++/
-@trusted SortedRange!(R, less) insertionSort(alias less = "a < b", R)(R range, SearchPolicy SP)
+@trusted SortedRange!(R, less) insertionSort(alias less = "a < b", SearchPolicy SP, R)(R range)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
@@ -80,7 +80,7 @@ import std.range, std.algorithm, std.functional, std.array;
 		lower = 0;
 		upper = i;
 		
-		if(SP == SearchPolicy.gallop || SP == SearchPolicy.gallopBackwards)
+		static if(SP == SearchPolicy.gallop || SP == SearchPolicy.gallopBackwards)
 		{
 			size_t gap = 1;
 			while(gap <= upper)
@@ -98,7 +98,7 @@ import std.range, std.algorithm, std.functional, std.array;
 			}
 		}
 		
-		else if(SP == SearchPolicy.trot || SP == SearchPolicy.trotBackwards)
+		static if(SP == SearchPolicy.trot || SP == SearchPolicy.trotBackwards)
 		{
 			size_t gap = 1;
 			while(gap <= upper)
@@ -106,7 +106,7 @@ import std.range, std.algorithm, std.functional, std.array;
 				if(lessFun(o, range[upper - gap]))
 				{
 					upper -= gap;
-					--gap;
+					++gap;
 				}
 				else
 				{
@@ -141,9 +141,9 @@ unittest
 		return isSorted!pred(range);
 	}
 	
-	bool testSort2(alias pred, R)(R range, SearchPolicy SP)
+	bool testSort2(alias pred, SearchPolicy SP, R)(R range)
 	{
-		insertionSort!(pred, R)(range, SP);
+		insertionSort!(pred, SP, R)(range);
 		return isSorted!pred(range);
 	}
 	
@@ -153,12 +153,12 @@ unittest
 		
 		if(!testSort!"a < b"(arr.dup)) ++failures;
 		if(!testSort!"a > b"(arr.dup)) ++failures;
-		if(!testSort2!"a < b"(arr.dup, SearchPolicy.binarySearch)) ++failures;
-		if(!testSort2!"a > b"(arr.dup, SearchPolicy.binarySearch)) ++failures;
-		if(!testSort2!"a < b"(arr.dup, SearchPolicy.gallop)) ++failures;
-		if(!testSort2!"a > b"(arr.dup, SearchPolicy.gallop)) ++failures;
-		if(!testSort2!"a < b"(arr.dup, SearchPolicy.trot)) ++failures;
-		if(!testSort2!"a > b"(arr.dup, SearchPolicy.trot)) ++failures;
+		if(!testSort2!("a < b", SearchPolicy.binarySearch)(arr.dup)) ++failures;
+		if(!testSort2!("a > b", SearchPolicy.binarySearch)(arr.dup)) ++failures;
+		if(!testSort2!("a < b", SearchPolicy.gallop)(arr.dup)) ++failures;
+		if(!testSort2!("a > b", SearchPolicy.gallop)(arr.dup)) ++failures;
+		if(!testSort2!("a < b", SearchPolicy.trot)(arr.dup)) ++failures;
+		if(!testSort2!("a > b", SearchPolicy.trot)(arr.dup)) ++failures;
 		
 		return failures;
 	}
