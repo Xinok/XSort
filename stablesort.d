@@ -10,17 +10,7 @@
 ++/
 
 module stablesort;
-
-private import std.range       : isRandomAccessRange, hasLength, hasSlicing, hasAssignableElements,
-                                 SortedRange, assumeSorted, ElementType;
-private import std.algorithm   : isSorted, copy, reverse;
-private import std.functional  : binaryFun;
-private import std.math        : log2;
-private import std.array       : save;
-private import std.c.stdlib    : alloca;
-private import std.parallelism : task, taskPool, defaultPoolThreads;
-
-
+import std.range, std.algorithm, std.functional, std.math, std.array, std.c.stdlib, std.parallelism;
 
 /++
 	Performs a stable sort on a random-access range according to predicate less.
@@ -53,6 +43,7 @@ private import std.parallelism : task, taskPool, defaultPoolThreads;
 	stableSort(array, false, temp); // Sorts array using temporary memory provided by user
 	-----------------
 ++/
+
 @trusted SortedRange!(R, less) stableSort(alias less = "a < b", bool inPlace = false, R)(R range, bool threaded = false, ElementType!(R)[] temp = null)
 {
 	static assert(isRandomAccessRange!R);

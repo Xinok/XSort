@@ -8,15 +8,7 @@
 ++/
 
 module unstablesort;
-
-private import std.range       : isRandomAccessRange, hasLength, hasSlicing, hasAssignableElements,
-                                 SortedRange, assumeSorted, ElementType;
-private import std.algorithm   : isSorted, swap;
-private import std.functional  : binaryFun;
-private import std.array       : save;
-private import std.parallelism : task, taskPool, defaultPoolThreads;
-private import std.math;       // pow
-
+import std.range, std.algorithm, std.functional, std.array, std.parallelism, std.math;
 
 /++
 	Performs an unstable sort on a random-access range according to predicate less.
@@ -40,6 +32,7 @@ private import std.math;       // pow
 	unstableSort(array, true);   // Sorts array using multiple threads
 	-----------------
 ++/
+
 @trusted SortedRange!(R, less) unstableSort(alias less = "a < b", R)(R range, bool threaded = false)
 {
 	static assert(isRandomAccessRange!R);
@@ -47,7 +40,6 @@ private import std.math;       // pow
 	static assert(hasSlicing!R);
 	static assert(hasAssignableElements!R);
 	
-	// UnstableSortImpl!(less, R).sort(range, threaded);
 	UnstableSortImpl!(less, R).sort(range, threaded);
 	
 	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
@@ -148,7 +140,8 @@ template UnstableSortImpl(alias pred, R)
 			immutable low = 0, med = 1, hig = range.length - 1;
 			swap(range[range.length / 2], range[med]);
 			if(greater(range[low], range[med])) swap(range[low], range[med]);
-			if(greater(range[med], range[hig])){
+			if(greater(range[med], range[hig]))
+			{
 				swap(range[med], range[hig]);
 				if(greater(range[low], range[med])) swap(range[low], range[med]);
 			}
@@ -184,22 +177,7 @@ template UnstableSortImpl(alias pred, R)
 		
 		return lef;
 	}
-	
-	/// Generate gap sequence for shell sort
-	pure immutable(size_t)[] shellGaps(size_t max){
-		immutable(size_t)[] gaps = [1, 4, 10, 23, 57, 132, 301, 701, 1750];
-		real k = 10;
-		real gap;
-		if(gaps[0] < max) while(true)
-		{
-			gap = (9 ^^ k - 4 ^^ k) / (5 * 4 ^^ (k - 1));
-			if(gap > max) break;
-			gaps ~= cast(size_t)gap;
-			++k;
-		}
-		return gaps;
-	}
-	
+		
 	/// Shell sort is used to avoid the worst-case of quick sort
 	void shellSort(R range)
 	{
@@ -221,6 +199,23 @@ template UnstableSortImpl(alias pred, R)
 				range[i] = o;
 			}
 		}
+	}
+	
+	/// Generate gap sequence for shell sort
+	pure immutable(size_t)[] shellGaps(size_t max){
+		immutable(size_t)[] gaps = [1, 4, 10, 23, 57, 132, 301, 701, 1750];
+		if(__ctfe) return gaps;
+		
+		real k = 10;
+		real gap;
+		if(gaps[0] < max) while(true)
+		{
+			gap = (9 ^^ k - 4 ^^ k) / (5 * 4 ^^ (k - 1));
+			if(gap > max) break;
+			gaps ~= cast(size_t)gap;
+			++k;
+		}
+		return gaps;
 	}
 	
 	/// A simple insertion sort used for sorting small sublists

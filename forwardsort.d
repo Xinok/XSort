@@ -13,12 +13,7 @@
 ++/
 
 module forwardsort;
-
-private import std.range       : isForwardRange, isInfinite, hasAssignableElements, ElementType, walkLength;
-private import std.algorithm   : isSorted, swap;
-private import std.functional  : binaryFun;
-private import std.array       : save, front, popFront, empty;
-private import std.parallelism : task, taskPool, defaultPoolThreads;
+import std.range, std.algorithm, std.functional, std.array, std.parallelism;
 
 /++
 	Performs an unstable sort on a forward range according to predicate less.
@@ -32,6 +27,7 @@ private import std.parallelism : task, taskPool, defaultPoolThreads;
 	forwardSort(array, true);   // Sorts array using multiple threads
 	-----------------
 ++/
+
 void forwardSort(alias less = "a < b", R)(R range, bool threaded = false)
 {
 	static assert(isForwardRange!R);
@@ -169,11 +165,11 @@ template ForwardSortImpl(alias pred, R)
 	void forwardCombSort(R range, immutable size_t len)
 	{
 		size_t gap = len;
-		bool swaps;
-		while(gap > 1 || swaps)
+		bool swapped;
+		while(gap > 1 || swapped)
 		{
 			if(gap > 1) gap /= 1.2473;
-			swaps = false;
+			swapped = false;
 			
 			R lef = range.save;
 			R rig = range.save;
@@ -185,7 +181,7 @@ template ForwardSortImpl(alias pred, R)
 				if(less(rig.front, lef.front))
 				{
 					swap(lef.front, rig.front);
-					swaps = true;
+					swapped = true;
 				}
 				lef.popFront();
 				rig.popFront();
