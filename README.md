@@ -142,6 +142,12 @@ While other sorting algorithms may generally be more favorable, it has it's uses
 
 ## Implementation ##
 
+First is a standard comb sort which passes over the range multiple times until it's sorted. A standard shrink factor of 1.2473 is used.
+
+Second is a comb sort ending with an insertion sort using a linear search. A shrink factor of 1.375 is used, which I found myself empirically. This offers the best performance when comparisons are inexpensive.
+
+Third is a comb sort ending with an insertion sort using a gallop search. A shrink factor of 1.44 is used, which I found myself empirically. This adds more overhead but does the fewest passes and comparisons.
+
 ----------
 
 # shellsort.d #
