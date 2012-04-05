@@ -9,12 +9,14 @@ A stable sort for sorting random-access ranges using little to no additional mem
 
 Stable sorting preserves the original order of equal elements. This is often necessary when sorting a list with multiple fields, where sorting one field changes the order of elements in other fields (e.g. table / spreadsheet).
 
-## Features ##
+**Features**
+
 * Concurrently sort range in multiple threads
 * Provide your own temporary memory (useful to avoid multiple allocations)
 * Sort in-place without using any additional space (but at the cost of performance)
 
-## Attributes ##
+**Attributes**
+
 * Stable, Natural
 * O(n) best case
 * O(n log n) average case
@@ -22,7 +24,7 @@ Stable sorting preserves the original order of equal elements. This is often nec
 * O(log n log n) auxiliary space complexity
 * O(log n) auxiliary space complexity (in-place)
 
-## Implementation ##
+**Implementation**
 
 For additional space, up to 1KiB may be allocated on the stack (using alloca()), and anything larger will be allocated on the heap. When sorting in-place, no additional space is allocated.
 
@@ -44,17 +46,19 @@ An unstable sort for quickly sorting random-access ranges in O(n log n) time.
 
 Unstable sorting doesn't preserve the original order of equal elements but is often faster than stable sorting.
 
-## Features ##
+**Features**
+
 * Concurrently sort range in multiple threads
 
-## Attributes ##
+**Attributes**
+
 * Unstable
 * O(n log n) best case
 * O(n log n) average case
 * O(n log n) *approximate* worst case
 * O(log n) auxiliary space complexity
 
-## Implementation ##
+**Implementation**
 
 It begins with a quick sort that chooses a pivot from a median of three, from the first, middle, and last elements. The partitioning method used works well when several elements are equal to the pivot.
 
@@ -71,17 +75,19 @@ Forward ranges don't allow for random access, so efficiently sorting in-place is
 
 > **WARNING:** This has a worst case performance of O(n^2). It's unlikely to occur in regular usage, but it's potentially exploitable in a DoS attack. Do not use when security is vital.
 
-## Features ##
+**Features**
+
 * Concurrently sort range in multiple threads
 
-## Attributes ##
+**Attributes**
+
 * Unstable
 * O(n log n) best case
 * O(n log n) average case
 * O(n^2) worst case
 * O(log n + 32n) auxiliary space complexity
 
-## Implementation ##
+**Implementation**
 
 It begins with a quick sort using a partitioning method which I like to call "caterpillar tracks", which works especially well for forward ranges. Since forward ranges don't have random access, it picks the first element as the pivot. This is a poor design choice, as it invokes worst case behavior on already sorted lists, so I hope to come up with a better solution in the future.
 
@@ -99,17 +105,19 @@ Insertion sort is useful for optimizing other sorting algorithms. Quick sort and
 
 > **WARNING:** Insertion sort has an average and worst case performance of O(n^2). Do not use with large ranges.
 
-## Features ##
+**Features**
+
 * Four search modes: Linear, Binary, Gallop, Trot
 
-## Attributes ##
+**Attributes**
+
 * Stable, Natural (excl. binary search)
 * O(n) best case
 * O(n^2) average case
 * O(n^2) worst case
 * O(1) auxiliary space complexity
 
-## Implementation ##
+**Implementation**
 
 An insertion sort which runs from front to back and provides four different search modes.
 
@@ -130,17 +138,19 @@ While other sorting algorithms may generally be more favorable, it has it's uses
 
 > **WARNING:** Comb sort has a worst case performance of O(n^2). It's unlikely to occur in regular usage, but it's potentially exploitable in a DoS attack. Do not use when security is vital.
 
-## Features ##
+**Features**
+
 * Optional final pass of insertion sort utilizing linear or gallop search
 
-## Attributes ##
+**Attributes**
+
 * Unstable
-* O(n) best case
+* O(n) best case (according to [Wikipedia](https://secure.wikimedia.org/wikipedia/en/wiki/Comb_sort))
 * O(n log n) average case
 * O(n^2) worst case
 * O(1) auxiliary space complexity
 
-## Implementation ##
+**Implementation**
 
 First is a standard comb sort which passes over the range multiple times until it's sorted. A standard shrink factor of 1.2473 is used.
 
@@ -155,14 +165,16 @@ A shell sort for random-access ranges.
 
 I've always favored shell sort for it's acceptable worst case performance, O(1) space complexity, and ease of implementation. It makes an ideal alternative to quick sort or heap sort.
 
-## Features ##
+**Features**
+
 * None to speak of
 
-## Attributes ##
+**Attributes**
+
 * Unstable, Natural
 * Unknown time complexity with given gap sequence
 * O(1) auxiliary space complexity
 
-## Implementation ##
+**Implementation**
 
 A standard shell sort implementation. It begins with the gap sequence, `[1, 4, 10, 23, 57, 132, 301, 701, 1750]`, and uses the formula, `(9 ^ k - 4 ^ k) / (5 * 4 ^ (k - 1))`, to generate larger gaps.
