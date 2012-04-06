@@ -68,12 +68,13 @@ import std.range, std.algorithm, std.functional, std.math;
 	while(true)
 	{
 		gap /= shrinkFactor;
-		if(gap <= 1) break;
 		
 		foreach(i; gap .. range.length) if(lessFun(range[i], range[i - gap]))
 		{
 			swap(range[i], range[i - gap]);
 		}
+		
+		if(gap <= 6) break;
 	}
 	
 	// Insertion sort
@@ -95,7 +96,7 @@ import std.range, std.algorithm, std.functional, std.math;
 }
 
 /// Performs a comb sort ending with an insertion sort using gallop search
-@trusted SortedRange!(R, less) combSortGallop(alias less = "a < b", R)(R range, immutable real shrinkFactor = 1.44)
+@trusted SortedRange!(R, less) combSortGallop(alias less = "a < b", R)(R range, immutable real shrinkFactor = 1.42)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
@@ -109,12 +110,13 @@ import std.range, std.algorithm, std.functional, std.math;
 	while(true)
 	{
 		gap /= shrinkFactor;
-		if(gap <= 1) break;
 		
 		foreach(i; gap .. range.length) if(lessFun(range[i], range[i - gap]))
 		{
 			swap(range[i], range[i - gap]);
 		}
+		
+		if(gap <= 32) break;
 	}
 	
 	// Gallop insertion sort
