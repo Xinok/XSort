@@ -1,4 +1,4 @@
-A collection of sorting algorithms for the D programming language. Some were implemented with a specific purpose in mind *(stable / unstable / forward sorting)*, while others are generic implementations provided for general use or reference. All modules contain documentation, unittests, and can be used independently.
+A collection of sorting algorithms for the D programming language. Some were implemented with a specific purpose in mind *(stable / unstable / forward sorting)*, while others are generic implementations provided for general use or reference. All modules contain documentation, unittests, and can be used independently of one another.
 
 Phobos is the standard library for the [D programming language](http://dlang.org/). The stable sort in Phobos is slow, broken, and not even stable ([bug 4584](http://d.puremagic.com/issues/show_bug.cgi?id=4584)). The unstable sort works great overall but has a few bad cases where it performs poorly ([bug 7767](http://d.puremagic.com/issues/show_bug.cgi?id=7767)). I provide two of these modules as substitutes (and possible replacements) for the sort function in Phobos.
 
@@ -152,18 +152,18 @@ While other sorting algorithms may generally be more favorable, it has it's uses
 
 **Implementation**
 
-First is a standard comb sort which passes over the range multiple times until it's sorted. A standard shrink factor of 1.2473 is used.
+First is a standard comb sort which passes over the range multiple times until it's sorted. A standard shrink factor of 1.2473 is used. This has the worst performance, and is only provided for reference.
 
-Second is a comb sort ending with an insertion sort using a linear search. A shrink factor of 1.375 is used, which I found myself empirically. This offers the best performance when comparisons are inexpensive.
+Second is a comb sort with a shrink factor of 1.375. It will sweep the range until the gap is 6 or less. It finishes with a final pass of insertion sort (using a standard linear search). This offers the best performance when comparisons are inexpensive.
 
-Third is a comb sort ending with an insertion sort using a gallop search. A shrink factor of 1.44 is used, which I found myself empirically. This adds more overhead but does the fewest passes and comparisons.
+Third is a comb sort with a shrink factor of 1.42. It will sweep the range until the gap is 32 or less. It finishes with a final pass of insertion sort utilizing a gallop search. This adds the most overhead, but does the fewest comparisons.
 
 ----------
 
 # shellsort.d #
 A shell sort for random-access ranges.
 
-I've always favored shell sort for it's acceptable worst case performance, O(1) space complexity, and ease of implementation. It makes an ideal alternative to quick sort or heap sort.
+I've always favored shell sort for it's acceptable worst case performance, O(1) space complexity, ease of implementation, and small code size similar to comb sort. It makes an ideal alternative to quick sort or heap sort.
 
 **Features**
 
