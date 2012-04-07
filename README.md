@@ -178,3 +178,42 @@ I've always favored shell sort for it's acceptable worst case performance, O(1) 
 **Implementation**
 
 A standard shell sort implementation. It begins with the gap sequence, `[1, 4, 10, 23, 57, 132, 301, 701, 1750]`, and uses the formula, `(9 ^ k - 4 ^ k) / (5 * 4 ^ (k - 1))`, to generate larger gaps.
+
+----------
+
+# mergesort.d #
+A merge sort for random-access ranges.
+
+**Features**
+
+* Merge using O(n/2) space
+
+**Attributes**
+
+* Stable
+* O((n log n) / 2) best case
+* O(n log n) average case
+* O(n log n) worst case
+* O(n), O(n/2) auxiliary space complexity
+
+**Implementation**
+
+First is a standard merge sort implementation using O(n) additional space.
+
+Second is a merge sort using O(n/2) additional space. It accomplishes this by copying only the left half into temporary memory, and then merging both halves in place.
+
+Binary insertion sort is used to sort small sublists of up to 32 elements. This increases performance, but doesn't necessarily reduce the number of comparisons.
+
+----------
+
+# Other Algorithms #
+
+**Tim Sort** - A clever adaptive merge sort variant which strives to minimize comparisons. An implementation in D can be found [here](http://personal.utulsa.edu/~ellery-newcomer/timsort.d), albeit it is broken. I plan to write my own module.
+
+**Heap Sort** - An in-place unstable sorting algorithm with a guaranteed worst case performance of O(n log n).
+
+**Stable quick sort** - It is possible to write a stable quick sort, though there's no reason to use it over merge sort. I plan to write a module with three levels of space complexity: O(n), O(log n log n), and O(log n) in-place.
+
+**Smooth sort** - A natural heap sort variant using leonardo numbers. An implementation in D can be found [here](https://github.com/deadalnix/Dsort/blob/master/sort/smooth.d), albeit it is broken.
+
+**Tree Sort** - A sorting algorithm utilizing a binary search tree (preferably self-balancing). One can easily be implemented in D using [RedBlackTree in std.container](http://dlang.org/phobos/std_container.html#RedBlackTree).
