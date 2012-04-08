@@ -5,10 +5,13 @@
 	
 	Authors:  Xinok
 	License:  Public Domain
+	
+	Bugs:
+	Parallel sort fails to compile in debug builds
 ++/
 
 module mergesort;
-import std.range, std.algorithm, std.functional, std.array;
+import std.range, std.algorithm, std.functional, std.array, std.parallelism;
 
 /++
 	Performs a merge sort on a random-access range according to predicate less.
@@ -16,7 +19,8 @@ import std.range, std.algorithm, std.functional, std.array;
 	Returns: Sorted input as SortedRange
 	
 	Params:
-	half = Set to true to merge using O(n/2) additional space
+	half = Set to true to merge using O(n/2) additional space, or false for O(n)
+	threaded = Set to true to sort using multiple threads
 	temp = Optionally provide your own additional space for sorting
 		
 	Examples:
@@ -24,24 +28,29 @@ import std.range, std.algorithm, std.functional, std.array;
 	int[] array = [10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70];
 	mergeSort(array);
 	mergeSort!"a > b"(array); // Sorts array descending	
+	mergeSort(array, true);   // Sorts array using multiple threads
+	
+	int[] temp;
+	temp.length = 64;
+	mergeSort(array, false, temp); // Sorts array using temporary memory provided by user
 	-----------------
 ++/
 
-@trusted SortedRange!(R, less) mergeSort(alias less = "a < b", R)(R range, bool half = false, ElementType!(R)[] temp = null)
+@trusted SortedRange!(R, less) mergeSort(alias less = "a < b", bool half = true, R)(R range, bool threaded = false, ElementType!(R)[] temp = null)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
 	static assert(hasSlicing!R);
 	static assert(hasAssignableElements!R);
 	
-	MergeSortImpl!(less, R).sort(range, half, temp);
+	MergeSortImpl!(less, half, R).sort(range, threaded, temp);
 	
 	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
 	return assumeSorted!(less, R)(range.save);
 }
 
 /// Merge Sort implementation
-template MergeSortImpl(alias pred, R)
+template MergeSortImpl(alias pred, bool half, R)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
@@ -54,82 +63,74 @@ template MergeSortImpl(alias pred, R)
 	bool greater(T a, T b){ return less(b, a); }
 	bool greaterEqual(T a, T b){ return !less(a, b); }
 	bool lessEqual(T a, T b){ return !less(b, a); }
+	
+	enum MAX_INSERT = 32;        // Maximum length for an insertion sort
+	enum MIN_THREAD = 1024 * 64; // Minimum length of a sublist to initiate new thread
 
 	/// Entry point for standard merge sort
-	void sort(R range, bool half, T[] temp)
+	void sort(R range, bool threaded, T[] temp)
 	{
-		if(half)
+		static if(half)
 		{
 			if(temp.length < range.length / 2) temp.length = range.length / 2;
-			splitHalf(range, temp);
 		}
 		else
 		{
 			if(temp.length < range.length) temp.length = range.length;
+		}
+		
+		if(threaded && !__ctfe)
+			concSort(range, defaultPoolThreads + 1, temp);
+		else
+			split(range, temp);
+	}
+	
+	/// Concurrently sort range
+	void concSort(R range, size_t threadCount, T[] temp)
+	{
+		if(threadCount < 2 || range.length < MIN_THREAD)
+		{
+			split(range, temp);
+			return;
+		}
+		
+		debug
+		{
+			//@ Threading code currently does not compile in debug builds
 			split(range, temp);
 		}
+		else
+		{
+			immutable mid = range.length / 2;
+			auto th = task!(concSort)(range[0 .. mid], threadCount / 2, temp[0 .. $ / 2]);
+			taskPool.put(th);
+			concSort(range[mid .. range.length], threadCount - (threadCount / 2), temp[$ / 2 .. $]);
+			th.workForce();
+			merge(range, mid, temp);
+		}
 	}
+
 	
 	/// Recursively split range and merge halves
 	void split(R range, T[] temp)
 	{
-		assert(temp.length >= range.length);
-		
-		if(range.length <= 32)
+		if(range.length <= MAX_INSERT)
 		{
 			binaryInsertionSort(range);
 			return;
 		}
 		immutable mid = range.length / 2;
-		split(range[0 .. mid], temp[0 .. mid]);
-		split(range[mid .. range.length], temp[mid .. temp.length]);
+		split(range[0 .. mid], temp);
+		split(range[mid .. range.length], temp);
 		merge(range, mid, temp);
 	}
-	
-	/// Merge two halves using O(n) additional space
+		
+	/// Merge two halves using temp
+	static if(half)
 	void merge(R range, immutable size_t mid, T[] temp)
 	{
 		assert(mid <= range.length);
-		
-		size_t i = 0, lef = 0, rig = mid;
-		while(true)
-		{
-			if(lessEqual(range[lef], range[rig]))
-			{
-				temp[i++] = range[lef++];
-				if(lef >= mid) break;
-			}
-			else
-			{
-				temp[i++] = range[rig++];
-				if(rig >= range.length)
-				{
-					while(lef < mid) temp[i++] = range[lef++];
-					break;
-				}
-			}
-		}
-		copy(temp[0 .. i], range[0 .. i]);
-	}
-	
-	/// Recursively split range and merge halves
-	void splitHalf(R range, T[] temp)
-	{
-		if(range.length <= 32)
-		{
-			binaryInsertionSort(range);
-			return;
-		}
-		immutable mid = range.length / 2;
-		splitHalf(range[0 .. mid], temp[0 .. mid / 2]);
-		splitHalf(range[mid .. range.length], temp[mid / 2 .. temp.length]);
-		mergeHalf(range, mid, temp);
-	}
-	
-	/// Merge two halves using O(n/2) additional space
-	void mergeHalf(R range, immutable size_t mid, T[] temp)
-	{
-		assert(mid <= range.length);
+		assert(temp.length >= range.length / 2);
 		
 		temp = temp[0 .. mid];
 		copy(range[0..mid], temp);
@@ -155,6 +156,33 @@ template MergeSortImpl(alias pred, R)
 		}
 	}
 
+	static if(!half)
+	void merge(R range, immutable size_t mid, T[] temp)
+	{
+		assert(mid <= range.length);
+		assert(temp.length >= range.length);
+		
+		size_t i = 0, lef = 0, rig = mid;
+		while(true)
+		{
+			if(lessEqual(range[lef], range[rig]))
+			{
+				temp[i++] = range[lef++];
+				if(lef >= mid) break;
+			}
+			else
+			{
+				temp[i++] = range[rig++];
+				if(rig >= range.length)
+				{
+					while(lef < mid) temp[i++] = range[lef++];
+					break;
+				}
+			}
+		}
+		copy(temp[0 .. i], range[0 .. i]);
+	}
+	
 	/// A simple insertion sort used for sorting small sublists
 	void binaryInsertionSort(R range)
 	{
@@ -179,9 +207,9 @@ template MergeSortImpl(alias pred, R)
 
 unittest
 {
-	bool testSort(alias pred, bool inPlace = false, R)(R range, bool half)
+	bool testSort(alias pred, bool half = false, R)(R range)
 	{
-		mergeSort!(pred, R)(range);
+		mergeSort!(pred, half, R)(range);
 		return isSorted!pred(range);
 	}
 	
@@ -189,13 +217,13 @@ unittest
 	{
 		int failures = 0;
 		
-		// Sort
-		if(!testSort!"a < b"(arr.dup, false)) ++failures;
-		if(!testSort!"a > b"(arr.dup, false)) ++failures;
+		// Sort using O(n) space
+		if(!testSort!("a < b", false)(arr.dup)) ++failures;
+		if(!testSort!("a > b", false)(arr.dup)) ++failures;
 		
-		// Half Sort
-		if(!testSort!("a < b")(arr.dup, true)) ++failures;
-		if(!testSort!("a > b")(arr.dup, true)) ++failures;
+		// Sort using O(n/2) space
+		if(!testSort!("a < b", true)(arr.dup)) ++failures;
+		if(!testSort!("a > b", true)(arr.dup)) ++failures;
 		
 		return failures;
 	}

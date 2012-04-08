@@ -186,7 +186,9 @@ A merge sort for random-access ranges.
 
 **Features**
 
-* Merge using O(n/2) space
+* Concurrently sort range in multiple threads
+* Provide your own temporary memory (useful to avoid multiple allocations)
+* Sort using O(n) or O(n/2) space complexity
 
 **Attributes**
 
