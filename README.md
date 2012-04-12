@@ -95,6 +95,28 @@ When a partition is small enough, binary insertion sort is used to sort small su
 
 If too many recursions occur, comb sort is used to avoid the worst case of quick sort. A shrink factor of 1.2473 is used. Comb sort works well with forward ranges, and although it still has a worst-case of O(n^2), it's unlikely to happen in regular usage.
 
+----------
+
+# timsort.d #
+A tim sort for random-access ranges.
+
+Tim sort is a natural merge sort variant. It's a complex algorithm, so if you wish to know more about it, see [Wikipedia](https://en.wikipedia.org/wiki/Timsort) or the [Timsort Paper](http://svn.python.org/projects/python/trunk/Objects/listsort.txt).
+
+**Features**
+
+* None to speak of
+
+**Attributes**
+
+* Stable, Natural
+* O(n) best case
+* O(n log n) average case
+* O(n log n) worst case
+* O(n / 2) worst case auxiliary space complexity
+
+**Implementation**
+
+I wrote a proper implementation from scratch for D. I used [TimSort.java](http://cr.openjdk.java.net/~martin/webrevs/openjdk7/timsort/raw_files/new/src/share/classes/java/util/TimSort.java) for Android as a reference. Major differences include the use of static functions, slicing, and the way in which many components. Only some small things were copied pretty much as is (constants, minRunLength, ensureCapacity).
 
 ----------
 
@@ -209,8 +231,6 @@ Binary insertion sort is used to sort small sublists of up to 32 elements. This 
 ----------
 
 # Other Algorithms #
-
-**Tim Sort** - A clever adaptive merge sort variant which strives to minimize comparisons. An implementation in D can be found [here](http://personal.utulsa.edu/~ellery-newcomer/timsort.d), albeit it is broken. I plan to write my own module.
 
 **Heap Sort** - An in-place unstable sorting algorithm with a guaranteed worst case performance of O(n log n).
 
