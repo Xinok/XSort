@@ -1,7 +1,7 @@
 /++
 	Merge Sort for Random-Access Ranges
 	
-	Written and tested for DMD 2.058 and Phobos
+	Written and tested for DMD 2.059 and Phobos
 	
 	Authors:  Xinok
 	License:  Public Domain
@@ -67,7 +67,7 @@ template MergeSortImpl(alias pred, bool half, R)
 	enum MAX_INSERT = 32;        // Maximum length for an insertion sort
 	enum MIN_THREAD = 1024 * 64; // Minimum length of a sublist to initiate new thread
 
-	/// Entry point for standard merge sort
+	/// Entry point for merge sort
 	void sort(R range, bool threaded, T[] temp)
 	{
 		static if(half)
@@ -202,6 +202,18 @@ template MergeSortImpl(alias pred, bool half, R)
 			for(upper = i; upper > lower; --upper) range[upper] = range[upper-1];
 			range[upper] = o;
 		}
+	}
+	
+	//@ Workaround for DMD issue 7898
+	void copy(R1, R2)(R1 src, R2 dst)
+	{
+		import std.traits;
+		static if(isArray!R1 && isArray!R2) if(__ctfe)
+		{
+			dst[] = src[];
+			return;
+		}
+		std.algorithm.copy(src, dst);
 	}
 }
 

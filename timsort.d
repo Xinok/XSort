@@ -1,12 +1,12 @@
 /++
 	Tim Sort for Random-Access Ranges
 	
-	Written and tested for DMD 2.058 and Phobos
+	Written and tested for DMD 2.059 and Phobos
 	
 	Authors:  Xinok
 	License:  Public Domain
 	
-	Bugs: CTFE not supported
+	Bugs: CTFE fails under DMD
 ++/
 
 module timsort;
@@ -156,7 +156,7 @@ template TimSortImpl(alias pred, R)
 	}
 	
 	/// Calculates optimal value for minRun
-	size_t minRunLength(size_t n)
+	pure size_t minRunLength(size_t n)
 	{
 		size_t r = 0;
 		while(n >= MIN_MERGE)
@@ -194,7 +194,7 @@ template TimSortImpl(alias pred, R)
 	void binaryInsertionSort(R range, size_t i = 1)
 	out
 	{
-		assert(isSorted!pred(range));
+		if(!__ctfe) assert(isSorted!pred(range));
 	}
 	body
 	{
@@ -221,8 +221,11 @@ template TimSortImpl(alias pred, R)
 	void merge(R range, size_t mid, ref size_t minGallop, ref T[] temp)
 	in
 	{
-		assert(isSorted!pred(range[0 .. mid]));
-		assert(isSorted!pred(range[mid .. range.length]));
+		if(!__ctfe)
+		{
+			assert(isSorted!pred(range[0 .. mid]));
+			assert(isSorted!pred(range[mid .. range.length]));
+		}
 	}
 	body
 	{
@@ -278,7 +281,7 @@ template TimSortImpl(alias pred, R)
 	size_t mergeLo(R range, immutable size_t mid, size_t minGallop, T[] temp)
 	out
 	{
-		assert(isSorted!pred(range));
+		if(!__ctfe) assert(isSorted!pred(range));
 	}
 	body
 	{
@@ -351,7 +354,7 @@ template TimSortImpl(alias pred, R)
 	size_t mergeHi(R range, immutable size_t mid, size_t minGallop, T[] temp)
 	out
 	{
-		assert(isSorted!pred(range));
+		if(!__ctfe) assert(isSorted!pred(range));
 	}
 	body
 	{
@@ -509,6 +512,18 @@ template TimSortImpl(alias pred, R)
 	alias gallopSearch!(false, true)  gallopForwardUpper;
 	alias gallopSearch!(true, false)  gallopReverseLower;
 	alias gallopSearch!(true, true)   gallopReverseUpper;
+	
+	///@ Workaround for DMD issue 7898
+	void copy(R1, R2)(R1 src, R2 dst)
+	{
+		import std.traits;
+		static if(isArray!R1 && isArray!R2) if(__ctfe)
+		{
+			dst[] = src[];
+			return;
+		}
+		std.algorithm.copy(src, dst);
+	}
 }
 
 unittest
@@ -551,8 +566,6 @@ unittest
 	assert(testCall(test) == 0);
 	
 	// CTFE Test
-	//@ Disabled - CTFE is currently not supported
-	version(none)
 	{
 		enum result = testCall(test);
 		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: timSort CTFE unittest failed ", result, " of 2 tests");

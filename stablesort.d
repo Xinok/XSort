@@ -1,12 +1,15 @@
 /++
 	Stable Sort for Random-Access Ranges
 	
-	Written and tested for DMD 2.058 and Phobos
+	Written and tested for DMD 2.059 and Phobos
 	
 	Authors:  Xinok
 	License:  Public Domain
 	
-	Bugs: CTFE doesn't work under DMD
+	Bugs:
+	CTFE fails under DMD
+	
+	Parallel sort fails to compile in debug builds
 ++/
 
 module stablesort;
@@ -302,16 +305,20 @@ template StableSortImpl(alias pred, bool inPlace = false, R)
 	}
 	
 	/// Use insertion to merge two runs in-place
-	static if(inPlace) void mergeInsertion(R range, immutable size_t mid){
+	static if(inPlace) void mergeInsertion(R range, immutable size_t mid)
+	{
 		size_t lef = 0, rig = mid, i;
 		T o;
 		
-		while(true){
-			if(lessEqual(range[lef], range[rig])){
+		while(true)
+		{
+			if(lessEqual(range[lef], range[rig]))
+			{
 				++lef;
 				if(lef >= rig) break;
 			}
-			else{
+			else
+			{
 				o = range[rig];
 				for(i = rig; i > lef; --i) range[i] = range[i-1];
 				range[i] = o;
@@ -374,6 +381,18 @@ template StableSortImpl(alias pred, bool inPlace = false, R)
 			for(upper = i; upper > lower; --upper) range[upper] = range[upper-1];
 			range[upper] = o;
 		}
+	}
+	
+	//@ Workaround for DMD issue 7898
+	void copy(R1, R2)(R1 src, R2 dst)
+	{
+		import std.traits;
+		static if(isArray!R1 && isArray!R2) if(__ctfe)
+		{
+			dst[] = src[];
+			return;
+		}
+		std.algorithm.copy(src, dst);
 	}
 }
 
