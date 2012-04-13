@@ -45,6 +45,7 @@ import std.range, std.algorithm, std.functional, std.array, std.typetuple;
 	return assumeSorted!(less, R)(range.save);
 }
 
+/// Tim Sort implementation
 template TimSortImpl(alias pred, R)
 {
 	static assert(isRandomAccessRange!R);
@@ -67,7 +68,6 @@ template TimSortImpl(alias pred, R)
 	
 	/// Entry point for tim sort
 	void sort(R range, T[] temp)
-	body
 	{
 		// Do insertion sort on small range
 		if(range.length <= MIN_MERGE)
@@ -82,7 +82,11 @@ template TimSortImpl(alias pred, R)
 		Slice[]   stack;
 		
 		// Allocate temporary memory if not provided by user
-		if(temp.length < minTemp) temp.reserve(minTemp);
+		if(temp.length < minTemp)
+		{
+			if(__ctfe) temp.length = minTemp;
+			else temp = uninitializedArray!(T[])(minTemp);
+		}
 		
 		// Merge two runs in stack at (i, i + 1)
 		// Pops run from stack after merging
@@ -165,6 +169,11 @@ template TimSortImpl(alias pred, R)
 	
 	/// Returns length of first run in range
 	size_t firstRun(R range)
+	out(ret)
+	{
+		assert(ret <= range.length);
+	}
+	body
 	{
 		if(range.length < 2) return range.length;
 		
@@ -243,6 +252,11 @@ template TimSortImpl(alias pred, R)
 	
 	/// Enlarge size of temporary memory if needed
 	T[] ensureCapacity(size_t rangeLen, size_t minCapacity, T[] temp)
+	out(ret)
+	{
+		assert(ret.length >= minCapacity);
+	}
+	body
 	{
 		if(temp.length < minCapacity)
 		{
@@ -253,12 +267,14 @@ template TimSortImpl(alias pred, R)
 			if(newSize < minCapacity) newSize = minCapacity;
 			else newSize = min(newSize, rangeLen / 2);
 			
-			temp.length = newSize;
+			if(__ctfe) temp.length = newSize;
+			else temp = uninitializedArray!(T[])(newSize);
 		}
 		return temp;
 	}
 	
 	/// Merge front to back. Returns new value of minGallop.
+	/// temp must be large enough to store range[0 .. mid]
 	size_t mergeLo(R range, immutable size_t mid, size_t minGallop, T[] temp)
 	out
 	{
@@ -331,6 +347,7 @@ template TimSortImpl(alias pred, R)
 	}
 	
 	/// Merge back to front. Returns new value of minGallop.
+	/// temp must be large enough to store range[mid .. range.length]
 	size_t mergeHi(R range, immutable size_t mid, size_t minGallop, T[] temp)
 	out
 	{
@@ -414,133 +431,84 @@ template TimSortImpl(alias pred, R)
 		return minGallop > 0 ? minGallop : 1;
 	}
 	
-	/// Gallop front to back, returning lower bound of equal elements.
-	size_t gallopForwardLower(R)(R range, T value)
+	/// false = forward / lower, true = reverse / upper
+	template gallopSearch(bool forwardReverse, bool lowerUpper)
 	{
-		size_t lower = 0, center = 1, upper = range.length;
-		alias center gap;
-		
-		// Gallop search
-		while(lower + gap < upper)
+		/// Gallop search on range
+		size_t gallopSearch(R)(R range, T value)
+		out(ret)
 		{
-			if(greater(value, range[lower + gap]))
+			assert(ret <= range.length);
+		}
+		body
+		{
+			static if(!forwardReverse && !lowerUpper) alias greater comp;      // forward lower
+			static if(!forwardReverse && lowerUpper)  alias greaterEqual comp; // forward upper
+			static if(forwardReverse && !lowerUpper)  alias lessEqual comp;    // reverse lower
+			static if(forwardReverse && lowerUpper)   alias less comp;         // reverse upper
+			
+			size_t lower = 0, center = 1, upper = range.length;
+			alias center gap;
+			
+			static if(forwardReverse)
 			{
-				lower += gap;
-				gap *= 2;
+				// Gallop Search Reverse
+				while(gap <= upper)
+				{
+					if(comp(value, range[upper - gap]))
+					{
+						upper -= gap;
+						gap *= 2;
+					}
+					else
+					{
+						lower = upper - gap;
+						break;
+					}
+				}
+				
+				// Binary Search Reverse
+				while(upper != lower)
+				{
+					center = lower + (upper - lower) / 2;
+					if(comp(value, range[center])) upper = center;
+					else lower = center + 1;
+				}
 			}
 			else
 			{
-				upper = lower + gap;
-				break;
+				// Gallop Search Forward
+				while(lower + gap < upper)
+				{
+					if(comp(value, range[lower + gap]))
+					{
+						lower += gap;
+						gap *= 2;
+					}
+					else
+					{
+						upper = lower + gap;
+						break;
+					}
+				}
+				
+				// Binary Search Forward
+				while(lower != upper)
+				{
+					center = lower + (upper - lower) / 2;
+					if(comp(value, range[center])) lower = center + 1;
+					else upper = center;
+				}
 			}
+			
+			return lower;
 		}
-		
-		// Binary search on remainder
-		while(lower != upper)
-		{
-			center = lower + (upper - lower) / 2;
-			if(greater(value, range[center])) lower = center + 1;
-			else upper = center;
-		}
-		
-		return lower;
-	}
-
-	/// Gallop front to back, returning upper bound of equal elements.
-	size_t gallopForwardUpper(R)(R range, T value)
-	{
-		size_t lower = 0, center = 1, upper = range.length;
-		alias center gap;
-		
-		// Gallop search
-		while(lower + gap < upper)
-		{
-			if(greaterEqual(value, range[lower + gap]))
-			{
-				lower += gap;
-				gap *= 2;
-			}
-			else
-			{
-				upper = lower + gap;
-				break;
-			}
-		}
-		
-		// Binary search on remainder
-		while(lower != upper)
-		{
-			center = lower + (upper - lower) / 2;
-			if(greaterEqual(value, range[center])) lower = center + 1;
-			else upper = center;
-		}
-		
-		return lower;
-	}
-		
-	/// Gallop back to front, returning lower bound of equal elements.
-	size_t gallopReverseLower(R)(R range, T value)
-	{
-		size_t lower = 0, center = 1, upper = range.length;
-		alias center gap;
-		
-		// Gallop search
-		while(gap <= upper)
-		{
-			if(lessEqual(value, range[upper - gap]))
-			{
-				upper -= gap;
-				gap *= 2;
-			}
-			else
-			{
-				lower = upper - gap;
-				break;
-			}
-		}
-		
-		// Binary search on remainder
-		while(upper != lower)
-		{
-			center = lower + (upper - lower) / 2;
-			if(lessEqual(value, range[center])) upper = center;
-			else lower = center + 1;
-		}
-		
-		return lower;
 	}
 	
-	/// Gallop back to front, returning upper bound of equal elements.
-	size_t gallopReverseUpper(R)(R range, T value)
-	{
-		size_t lower = 0, center = 1, upper = range.length;
-		alias center gap;
-		
-		// Gallop search
-		while(gap <= upper)
-		{
-			if(less(value, range[upper - gap]))
-			{
-				upper -= gap;
-				gap *= 2;
-			}
-			else
-			{
-				lower = upper - gap;
-				break;
-			}
-		}
-		
-		// Binary search on remainder
-		while(upper != lower)
-		{
-			center = lower + (upper - lower) / 2;
-			if(less(value, range[center])) upper = center;
-			else lower = center + 1;
-		}
-		
-		return lower;
-	}
+	alias gallopSearch!(false, false) gallopForwardLower;
+	alias gallopSearch!(false, true)  gallopForwardUpper;
+	alias gallopSearch!(true, false)  gallopReverseLower;
+	alias gallopSearch!(true, true)   gallopReverseUpper;
 }
 
 unittest
@@ -587,7 +555,7 @@ unittest
 	version(none)
 	{
 		enum result = testCall(test);
-		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: timSort CTFE unittest failed ", result, " of 4 tests");
+		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: timSort CTFE unittest failed ", result, " of 2 tests");
 	}
 	
 	// Stability test
