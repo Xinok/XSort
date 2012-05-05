@@ -437,7 +437,7 @@ template TimSortImpl(alias pred, R)
 	/// false = forward / lower, true = reverse / upper
 	template gallopSearch(bool forwardReverse, bool lowerUpper)
 	{
-		/// Gallop search on range
+		/// Gallop search on range according to attributes forwardReverse and lowerUpper
 		size_t gallopSearch(R)(R range, T value)
 		out(ret)
 		{
@@ -445,16 +445,14 @@ template TimSortImpl(alias pred, R)
 		}
 		body
 		{
-			static if(!forwardReverse && !lowerUpper) alias greater comp;      // forward lower
-			static if(!forwardReverse && lowerUpper)  alias greaterEqual comp; // forward upper
-			static if(forwardReverse && !lowerUpper)  alias lessEqual comp;    // reverse lower
-			static if(forwardReverse && lowerUpper)   alias less comp;         // reverse upper
-			
 			size_t lower = 0, center = 1, upper = range.length;
 			alias center gap;
 			
 			static if(forwardReverse)
 			{
+				static if(!lowerUpper) alias lessEqual comp; // reverse lower
+				static if(lowerUpper)  alias less comp;      // reverse upper
+				
 				// Gallop Search Reverse
 				while(gap <= upper)
 				{
@@ -480,6 +478,9 @@ template TimSortImpl(alias pred, R)
 			}
 			else
 			{
+				static if(!lowerUpper) alias greater comp;      // forward lower
+				static if(lowerUpper)  alias greaterEqual comp; // forward upper
+				
 				// Gallop Search Forward
 				while(lower + gap < upper)
 				{
@@ -513,7 +514,7 @@ template TimSortImpl(alias pred, R)
 	alias gallopSearch!(true, false)  gallopReverseLower;
 	alias gallopSearch!(true, true)   gallopReverseUpper;
 	
-	///@ Workaround for DMD issue 7898
+	//@ Workaround for DMD issue 7898
 	void copy(R1, R2)(R1 src, R2 dst)
 	{
 		import std.traits;

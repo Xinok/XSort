@@ -73,6 +73,7 @@ import std.range, std.algorithm, std.functional, std.array;
 	alias binaryFun!less lessFun;
 	
 	size_t lower, center, upper;
+	alias center gap;
 	T o;
 	foreach(i; 1 .. range.length)
 	{
@@ -82,7 +83,7 @@ import std.range, std.algorithm, std.functional, std.array;
 		
 		static if(SP == SearchPolicy.gallop || SP == SearchPolicy.gallopBackwards)
 		{
-			size_t gap = 1;
+			gap = 1;
 			while(gap <= upper)
 			{
 				if(lessFun(o, range[upper - gap]))
@@ -100,7 +101,7 @@ import std.range, std.algorithm, std.functional, std.array;
 		
 		static if(SP == SearchPolicy.trot || SP == SearchPolicy.trotBackwards)
 		{
-			size_t gap = 1;
+			gap = 1;
 			while(gap <= upper)
 			{
 				if(lessFun(o, range[upper - gap]))
@@ -116,7 +117,7 @@ import std.range, std.algorithm, std.functional, std.array;
 			}
 		}
 		
-		// Binary search
+		// Binary search on remainder
 		while(upper != lower)
 		{
 			center = (lower + upper) / 2;

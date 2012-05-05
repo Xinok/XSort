@@ -136,7 +136,6 @@ import std.range, std.algorithm, std.functional, std.math;
 			{
 				upper -= gap;
 				gap *= 2;
-				// ++gap;
 			}
 			else
 			{

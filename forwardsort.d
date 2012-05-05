@@ -197,9 +197,9 @@ template ForwardSortImpl(alias pred, R)
 		
 		// Copy elements from range to array
 		R temp = range.save;
-		foreach(i; 0..len)
+		foreach(ref v; arr[0 .. len])
 		{
-			arr[i] = temp.front;
+			v = temp.front;
 			temp.popFront();
 		}
 		
@@ -224,9 +224,9 @@ template ForwardSortImpl(alias pred, R)
 		
 		// Copy elements from array to range
 		temp = range.save;
-		foreach(i; 0..len)
+		foreach(ref v; arr[0 .. len])
 		{
-			temp.front = arr[i];
+			temp.front = v;
 			temp.popFront();
 		}
 	}

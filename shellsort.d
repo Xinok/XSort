@@ -54,22 +54,18 @@ import std.range, std.algorithm, std.functional, std.math;
 	return assumeSorted!(less, R)(range.save);
 }
 
-/++
-	Generates gap sequence for shell sort
-	
-	It begins with the gap sequence, [1, 4, 10, 23, 57, 132, 301, 701, 1750],
-	and uses the formula, (9 ^ k - 4 ^ k) / (5 * 4 ^ (k - 1)), to generate larger gaps.
-++/
-pure immutable(size_t)[] shellGaps(size_t max){
+/// Generates gap sequence for shell sort
+pure immutable(size_t)[] shellGaps(size_t len)
+{
 	immutable(size_t)[] gaps = [1, 4, 10, 23, 57, 132, 301, 701, 1750];
 	if(__ctfe) return gaps;
 	
 	real k = 10;
 	real gap;
-	if(gaps[0] < max) while(true)
+	if(gaps[0] < len) while(true)
 	{
 		gap = (9 ^^ k - 4 ^^ k) / (5 * 4 ^^ (k - 1));
-		if(gap > max) break;
+		if(gap > len) break;
 		gaps ~= cast(size_t)gap;
 		++k;
 	}
