@@ -116,7 +116,7 @@ Tim sort is a natural merge sort variant. It's a complex algorithm, so if you wi
 
 **Implementation**
 
-I wrote a proper implementation from scratch for D. I used [TimSort.java](http://cr.openjdk.java.net/~martin/webrevs/openjdk7/timsort/raw_files/new/src/share/classes/java/util/TimSort.java) for Android as a reference. Major differences include the use of static functions, slicing, and the way in which many components. Only some small things were copied pretty much as is (constants, minRunLength, ensureCapacity).
+I wrote a proper implementation from scratch for D. I used [TimSort.java](http://cr.openjdk.java.net/~martin/webrevs/openjdk7/timsort/raw_files/new/src/share/classes/java/util/TimSort.java) for Android as a reference. Major differences include the use of static functions, slicing, and the way in which many components were implemented. Only some small parts were copied as is (constants, minRunLength, ensureCapacity).
 
 ----------
 
@@ -230,9 +230,33 @@ Binary insertion sort is used to sort small sublists of up to 32 elements. This 
 
 ----------
 
-# Other Algorithms #
+# heapsort.d #
+A heap sort for random-access ranges
 
-**Heap Sort** - An in-place unstable sorting algorithm with a guaranteed worst case performance of O(n log n).
+**Features**
+
+* Sort using sift-down or sift-up method
+
+**Attributes**
+
+* Unstable
+* O(n log n) best case
+* O(n log n) average case
+* O(n log n) worst case
+* O(1) auxiliary space complexity
+
+**Implementation**
+
+A total of four variations of heap sort are provided. You may choose between a binary or ternary heap, and you may choose between the sift-down or sift-up heapify method. Overall, a ternary heap and sift-down method seem to provide the best results.
+
+In a binary heap, each node has two children. In a ternary heap, each node has three children. Overall, a ternary heap is generally faster, doing fewer swaps and comparisons.
+
+The sift-down method walks in the direction of parent to child to child, while the sift-up method walks in reverse, of child to parent to parent. The sift-down method is generally faster as it only requires n/2 or n/3 passes, where as the sift-up method requires n passes.
+
+----------
+
+
+# Other Algorithms #
 
 **Stable quick sort** - It is possible to write a stable quick sort, though there's no reason to use it over merge sort. I plan to write a module with three levels of space complexity: O(n), O(log n log n), and O(log n) in-place.
 
