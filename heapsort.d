@@ -11,7 +11,7 @@ module heapsort;
 import std.range, std.algorithm, std.functional, std.array;
 
 /++
-	Performs a binary heap sort on a random-access range according to predicate less.
+	Performs a heap sort on a random-access range according to predicate less.
 	
 	Returns: Sorted input as SortedRange
 	
@@ -39,6 +39,7 @@ import std.range, std.algorithm, std.functional, std.array;
 	static void siftDown(R range, size_t root, immutable size_t end)
 	{
 		size_t child = void;
+		T value = range[root];
 		while(root * 2 < end)
 		{
 			child = root * 2 + 1;
@@ -46,28 +47,31 @@ import std.range, std.algorithm, std.functional, std.array;
 			{
 				++child;
 			}
-			if(lessFun(range[root], range[child]))
+			if(lessFun(value, range[child]))
 			{
-				swap(range[root], range[child]);
+				range[root] = range[child];
 				root = child;
 			}
 			else break;
 		}
+		range[root] = value;
 	}
 	
 	static void siftUp(R range, size_t child)
 	{
 		size_t parent = void;
+		T value = range[child];
 		while(child > 0)
 		{
 			parent = (child - 1) / 2;
-			if(lessFun(range[parent], range[child]))
+			if(lessFun(range[parent], value))
 			{
-				swap(range[parent], range[child]);
+				range[child] = range[parent];
 				child = parent;
 			}
 			else break;
 		}
+		range[child] = value;
 	}
 	
 	if(range.length > 1)
@@ -98,23 +102,7 @@ import std.range, std.algorithm, std.functional, std.array;
 	return assumeSorted!(less, R)(range.save);
 }
 
-/++
-	Performs a ternary heap sort on a random-access range according to predicate less.
-	
-	Returns: Sorted input as SortedRange
-	
-	Params:
-	heapifyMethod = Set to true for sift-up, or false for sift-down
-	
-	Examples:
-	-----------------
-	int[] array = [10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70];
-	ternaryHeapSort(array);
-	ternaryHeapSort!"a > b"(array); // Sorts array descending
-	ternaryHeapSort(array, true);   // Sorts array using sift-up method
-	-----------------
-++/
-
+/// Performs a heap sort using a ternary heap
 @trusted SortedRange!(R, less) ternaryHeapSort(alias less = "a < b", R)(R range, bool heapifyMethod = false)
 {
 	static assert(isRandomAccessRange!R);
@@ -127,6 +115,7 @@ import std.range, std.algorithm, std.functional, std.array;
 	static void siftDown(R range, size_t root, immutable size_t end)
 	{
 		size_t child = void;
+		T value = range[root];
 		while(root * 3 < end)
 		{
 			child = root * 3 + 1;
@@ -139,28 +128,31 @@ import std.range, std.algorithm, std.functional, std.array;
 			{
 				child += 2;
 			}
-			if(lessFun(range[root], range[child]))
+			if(lessFun(value, range[child]))
 			{
-				swap(range[root], range[child]);
+				range[root] = range[child];
 				root = child;
 			}
 			else break;
 		}
+		range[root] = value;
 	}
 	
 	static void siftUp(R range, size_t child)
 	{
 		size_t parent = void;
+		T value = range[child];
 		while(child > 0)
 		{
 			parent = (child - 1) / 3;
-			if(lessFun(range[parent], range[child]))
+			if(lessFun(range[parent], value))
 			{
-				swap(range[parent], range[child]);
+				range[child] = range[parent];
 				child = parent;
 			}
 			else break;
 		}
+		range[child] = value;
 	}
 	
 	if(range.length > 1)

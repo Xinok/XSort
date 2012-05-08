@@ -233,6 +233,8 @@ Binary insertion sort is used to sort small sublists of up to 32 elements. This 
 # heapsort.d #
 A heap sort for random-access ranges
 
+Heap sort combines in-place sorting with a **guaranteed** worst-case performance of O(n log n). Quick sort and comb sort have a worst-case performance of O(n^2), and the worst-case of shell sort is unknown (depending on gap sequence).
+
 **Features**
 
 * Sort using sift-down or sift-up method
