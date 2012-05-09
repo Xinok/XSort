@@ -237,6 +237,7 @@ Heap sort combines in-place sorting with a **guaranteed** worst-case performance
 
 **Features**
 
+* Use a binary or ternary heap
 * Heapify using sift-down or sift-up method
 
 **Attributes**
@@ -249,11 +250,11 @@ Heap sort combines in-place sorting with a **guaranteed** worst-case performance
 
 **Implementation**
 
-A standard heap sort uses a binary heap, which mean each node has two children. An alternative is to use a ternary heap, in which each node has three children. A ternary heap does fewer comparisons and generally has faster performance. For both variants, you may choose between the sift-down or sift-up method for heapifying.
+A standard heap sort uses a binary heap, which mean each node has two children. An alternative is to use a ternary heap, in which each node has three children. A ternary heap generally has faster performance and does fewer comparisons. 
 
-The sift-down method walks in the direction of parent to child to child, while the sift-up method walks in reverse, of child to parent to parent. The sift-down method is used by default as it's generally faster as it only requires n/2 or n/3 passes, where as the sift-up method requires n passes.
+You may also choose between the sift-down or sift-up method for heapifying. The sift-down method walks in the direction of parent to child to child, while the sift-up method walks in reverse, of child to parent to parent. The sift-down method is used by default as it's generally faster as it only requires n/2 or n/3 passes, where as the sift-up method requires n passes.
 
-There is also a 3-heap (ternary) bottom-up heap sort variant as described by [Bahlul Haider](http://www.csd.uwo.ca/People/gradstudents/mhaider5/) [[PDF](http://www.csd.uwo.ca/People/gradstudents/mhaider5/pdf/A_New_Varient_of_Heapsort.pdf)] which does significantly fewer comparisons. This variant adds more overhead and is only recommended when comparisons are expensive.
+There is also a variant as described by [Bahlul Haider](http://www.csd.uwo.ca/People/gradstudents/mhaider5/) [[PDF](http://www.csd.uwo.ca/People/gradstudents/mhaider5/pdf/A_New_Varient_of_Heapsort.pdf)] which does significantly fewer comparisons. This variant adds more overhead and is only recommended when comparisons are expensive.
 
 ----------
 

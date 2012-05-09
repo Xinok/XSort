@@ -16,119 +16,88 @@ import std.range, std.algorithm, std.functional, std.array;
 	Returns: Sorted input as SortedRange
 	
 	Params:
+	ternary       = Set to true for ternary heap, or false for binary heap
 	heapifyMethod = Set to true for sift-up, or false for sift-down
 	
 	Examples:
 	-----------------
 	int[] array = [10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70];
 	heapSort(array);
-	heapSort!"a > b"(array); // Sorts array descending
-	heapSort(array, true);   // Sorts array using sift-up method
+	heapSort!"a > b"(array);          // Sorts array descending
+	heapSort!("a < b", false)(array); // Sorts array using binary heap
+	heapSort(array, true);            // Sorts array using sift-up method
 	-----------------
 ++/
 
-@trusted SortedRange!(R, less) heapSort(alias less = "a < b", R)(R range, bool heapifyMethod = false)
+@trusted SortedRange!(R, less) heapSort(alias less = "a < b", bool ternary = true, R)(R range, bool heapifyMethod = false)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
 	static assert(hasAssignableElements!R);
 	
-	alias ElementType!R T;
-	alias binaryFun!less lessFun;
-	
-	static void siftDown(R range, size_t root, immutable size_t end)
-	{
-		size_t child = void;
-		T value = range[root];
-		while(root * 2 < end)
-		{
-			child = root * 2 + 1;
-			if(child < end && lessFun(range[child], range[child + 1]))
-			{
-				++child;
-			}
-			if(lessFun(value, range[child]))
-			{
-				range[root] = range[child];
-				root = child;
-			}
-			else break;
-		}
-		range[root] = value;
-	}
-	
-	static void siftUp(R range, size_t child)
-	{
-		size_t parent = void;
-		T value = range[child];
-		while(child > 0)
-		{
-			parent = (child - 1) / 2;
-			if(lessFun(range[parent], value))
-			{
-				range[child] = range[parent];
-				child = parent;
-			}
-			else break;
-		}
-		range[child] = value;
-	}
-	
-	if(range.length > 1)
-	{
-		size_t i = void;
-		immutable end = range.length - 1;
-		
-		// Heapify
-		if(heapifyMethod)
-		{
-			for(i = 1; i < range.length; ++i) siftUp(range, i);
-		}
-		else
-		{
-			i = range.length / 2;
-			while(i > 0) siftDown(range, --i, end);
-		}
-		
-		i = end;
-		while(i > 0)
-		{
-			swap(range[i], range[0]);
-			siftDown(range, 0, --i);
-		}
-	}
+	HeapSortImpl!(less, ternary, R).sort(range, heapifyMethod);
 	
 	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
 	return assumeSorted!(less, R)(range.save);
 }
 
-/// Performs a heap sort using a ternary heap
-@trusted SortedRange!(R, less) ternaryHeapSort(alias less = "a < b", R)(R range, bool heapifyMethod = false)
+template HeapSortImpl(alias pred, bool ternary, R)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
 	static assert(hasAssignableElements!R);
 	
 	alias ElementType!R T;
-	alias binaryFun!less lessFun;
+	alias binaryFun!pred less;
+	enum  base = ternary ? 3 : 2;
+	
+	void sort(R range, bool heapifyMethod)
+	{
+		if(range.length > 1)
+		{
+			size_t i = void;
+			immutable end = range.length - 1;
+			
+			// Heapify
+			if(heapifyMethod)
+			{
+				for(i = 1; i < range.length; ++i) siftUp(range, i);
+			}
+			else
+			{
+				i = range.length / base;
+				while(i > 0) siftDown(range, --i, end);
+			}
+			
+			// Sort
+			i = end;
+			while(i > 0)
+			{
+				swap(range[i], range[0]);
+				siftDown(range, 0, --i);
+			}
+		}
+	}
 	
 	static void siftDown(R range, size_t root, immutable size_t end)
 	{
 		size_t child = void;
 		T value = range[root];
-		while(root * 3 < end)
+		while(root * base < end)
 		{
-			child = root * 3 + 1;
-			if(child < end && lessFun(range[child], range[child + 1]))
+			child = root * base + 1;
+			
+			if(child < end && less(range[child], range[child + 1]))
 			{
 				++child;
-				if(child < end && lessFun(range[child], range[child + 1])) ++child;
+				static if(ternary) if(child < end && less(range[child], range[child + 1])) ++child;
 			}
-			else if(child < end - 1 && lessFun(range[child], range[child + 2]))
+			else static if(ternary) if(child < end - 1 && less(range[child], range[child + 2]))
 			{
 				child += 2;
 			}
-			if(lessFun(value, range[child]))
+			
+			if(less(value, range[child]))
 			{
 				range[root] = range[child];
 				root = child;
@@ -144,8 +113,8 @@ import std.range, std.algorithm, std.functional, std.array;
 		T value = range[child];
 		while(child > 0)
 		{
-			parent = (child - 1) / 3;
-			if(lessFun(range[parent], value))
+			parent = (child - 1) / base;
+			if(less(range[parent], value))
 			{
 				range[child] = range[parent];
 				child = parent;
@@ -154,33 +123,6 @@ import std.range, std.algorithm, std.functional, std.array;
 		}
 		range[child] = value;
 	}
-	
-	if(range.length > 1)
-	{
-		size_t i = void;
-		immutable end = range.length - 1;
-		
-		// Heapify
-		if(heapifyMethod)
-		{
-			for(i = 1; i < range.length; ++i) siftUp(range, i);
-		}
-		else
-		{
-			i = range.length / 3;
-			while(i > 0) siftDown(range, --i, end);
-		}
-		
-		i = end;
-		while(i > 0)
-		{
-			swap(range[i], range[0]);
-			siftDown(range, 0, --i);
-		}
-	}
-
-	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
-	return assumeSorted!(less, R)(range.save);
 }
 
 /++
@@ -205,7 +147,6 @@ template HaiderImpl(alias pred, R)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
-	static assert(hasSlicing!R);
 	static assert(hasAssignableElements!R);
 		
 	alias ElementType!R T;
@@ -284,19 +225,13 @@ template HaiderImpl(alias pred, R)
 
 unittest
 {
-	bool testSort(alias pred, R)(R range, bool siftMethod)
+	bool testSort(alias pred, bool ternary, R)(R range, bool siftMethod)
 	{
-		heapSort!(pred, R)(range, siftMethod);
+		heapSort!(pred, ternary, R)(range, siftMethod);
 		return isSorted!pred(range);
 	}
 	
-	bool testSort2(alias pred, R)(R range, bool siftMethod)
-	{
-		ternaryHeapSort!(pred, R)(range, siftMethod);
-		return isSorted!pred(range);
-	}
-	
-	bool testSort3(alias pred, R)(R range)
+	bool testSort2(alias pred, R)(R range)
 	{
 		haiderHeapSort!(pred, R)(range);
 		return isSorted!pred(range);
@@ -306,20 +241,20 @@ unittest
 	{
 		int failures = 0;
 		
-		if(!testSort!"a < b"(arr.dup, false)) ++failures;
-		if(!testSort!"a > b"(arr.dup, false)) ++failures;
+		if(!testSort!("a < b", false)(arr.dup, false)) ++failures;
+		if(!testSort!("a > b", false)(arr.dup, false)) ++failures;
 		
-		if(!testSort!"a < b"(arr.dup, true)) ++failures;
-		if(!testSort!"a > b"(arr.dup, true)) ++failures;
+		if(!testSort!("a < b", false)(arr.dup, true)) ++failures;
+		if(!testSort!("a > b", false)(arr.dup, true)) ++failures;
 		
-		if(!testSort2!"a < b"(arr.dup, false)) ++failures;
-		if(!testSort2!"a > b"(arr.dup, false)) ++failures;
+		if(!testSort!("a < b", true)(arr.dup, false)) ++failures;
+		if(!testSort!("a > b", true)(arr.dup, false)) ++failures;
 		
-		if(!testSort2!"a < b"(arr.dup, true)) ++failures;
-		if(!testSort2!"a > b"(arr.dup, true)) ++failures;
+		if(!testSort!("a < b", true)(arr.dup, true)) ++failures;
+		if(!testSort!("a > b", true)(arr.dup, true)) ++failures;
 		
-		if(!testSort3!"a < b"(arr.dup)) ++failures;
-		if(!testSort3!"a > b"(arr.dup)) ++failures;
+		if(!testSort2!"a < b"(arr.dup)) ++failures;
+		if(!testSort2!"a > b"(arr.dup)) ++failures;
 		
 		return failures;
 	}
