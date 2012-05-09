@@ -183,6 +183,105 @@ import std.range, std.algorithm, std.functional, std.array;
 	return assumeSorted!(less, R)(range.save);
 }
 
+/++
+	Performs a variation of heap sort as described by Bahlul Haider
+	Web: $(LINK http://www.csd.uwo.ca/People/gradstudents/mhaider5/)
+++/
+
+@trusted SortedRange!(R, less) haiderHeapSort(alias less = "a < b", R)(R range)
+{
+	static assert(isRandomAccessRange!R);
+	static assert(hasLength!R);
+	static assert(hasAssignableElements!R);
+	
+	HaiderImpl!(less, R).sort(range);
+	
+	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
+	return assumeSorted!(less, R)(range.save);
+}
+
+/// Implementation of haider heap sort
+template HaiderImpl(alias pred, R)
+{
+	static assert(isRandomAccessRange!R);
+	static assert(hasLength!R);
+	static assert(hasSlicing!R);
+	static assert(hasAssignableElements!R);
+		
+	alias ElementType!R T;
+	
+	alias binaryFun!pred less;
+	bool greater(T a, T b){ return less(b, a); }
+	bool greaterEqual(T a, T b){ return !less(a, b); }
+	bool lessEqual(T a, T b){ return !less(b, a); }
+	
+	void sort(R range)
+	{
+		size_t[100] sp; // Pass to heapify
+		
+		// Build Heap
+		foreach_reverse(i; 0 .. (range.length - 2) / 3 + 1)
+			heapify(range, sp, range[i], i, range.length);
+		
+		// Sort Heap
+		T temp;
+		size_t end = range.length;
+		for(size_t i = range.length - 1; i > 0; --i)
+		{
+			temp = range[i];
+			range[i] = range[0];
+			--end;
+			heapify(range, sp, temp, 0, end);
+		}
+	}
+	
+	void heapify(R range, size_t[] sp, T temp, size_t root, size_t end)
+	{
+		size_t highest = root, child = 0, parent = 0, sl = 0;
+		sp[0] = root;
+		
+		while(highest < end)
+		{
+			parent = highest;
+			child = 3 * parent + 1;
+			
+			if(child >= end) break;
+			
+			if(child + 1 == end)
+			{
+				highest = child;
+				sp[++sl] = child;
+				break;
+			}
+			
+			if(child + 2 == end)
+			{
+				if(greater(range[child], range[child + 1]))
+					highest = child;
+				else
+					highest = child + 1;
+				
+				sp[++sl] = highest;
+				break;
+			}
+			
+			if(greaterEqual(range[child + 2], range[child + 1]))
+				highest = child + 2;
+			else
+				highest = child + 1;
+			
+			if(greater(range[child], range[highest]))
+				highest = child;
+			
+			sp[++sl] = highest;
+		}
+		
+		while(less(range[sp[sl]], temp) && sl > 0) --sl;
+		foreach(j; 0 .. sl) range[sp[j]] = range[sp[j + 1]];
+		range[sp[sl]] = temp;
+	}
+}
+
 unittest
 {
 	bool testSort(alias pred, R)(R range, bool siftMethod)
@@ -194,6 +293,12 @@ unittest
 	bool testSort2(alias pred, R)(R range, bool siftMethod)
 	{
 		ternaryHeapSort!(pred, R)(range, siftMethod);
+		return isSorted!pred(range);
+	}
+	
+	bool testSort3(alias pred, R)(R range)
+	{
+		haiderHeapSort!(pred, R)(range);
 		return isSorted!pred(range);
 	}
 	
@@ -212,6 +317,9 @@ unittest
 		
 		if(!testSort2!"a < b"(arr.dup, true)) ++failures;
 		if(!testSort2!"a > b"(arr.dup, true)) ++failures;
+		
+		if(!testSort3!"a < b"(arr.dup)) ++failures;
+		if(!testSort3!"a > b"(arr.dup)) ++failures;
 		
 		return failures;
 	}
@@ -239,6 +347,6 @@ unittest
 	// CTFE Test
 	{
 		enum result = testCall(test);
-		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: unstableSort CTFE unittest failed ", result, " of 8 tests");
+		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: unstableSort CTFE unittest failed ", result, " of 10 tests");
 	}
 }
