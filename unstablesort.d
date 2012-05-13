@@ -177,46 +177,6 @@ template UnstableSortImpl(alias pred, R)
 		
 		return lef;
 	}
-		
-	/// Shell sort is used to avoid the worst-case of quick sort
-	void shellSort(R range)
-	{
-		immutable gaps = shellGaps(range.length);
-		T o; size_t i;
-		
-		foreach_reverse(gap; gaps) if(gap < range.length)
-		{
-			foreach(start; gap .. range.length) if(less(range[start], range[start - gap]))
-			{
-				i = start;
-				o = range[i];
-				do
-				{
-					range[i] = range[i - gap];
-					i -= gap;
-				}
-				while(i >= gap && less(o, range[i - gap]));
-				range[i] = o;
-			}
-		}
-	}
-	
-	/// Generate gap sequence for shell sort
-	pure immutable(size_t)[] shellGaps(size_t max){
-		immutable(size_t)[] gaps = [1, 4, 10, 23, 57, 132, 301, 701, 1750];
-		if(__ctfe) return gaps;
-		
-		real k = 10;
-		real gap;
-		if(gaps[0] < max) while(true)
-		{
-			gap = (9 ^^ k - 4 ^^ k) / (5 * 4 ^^ (k - 1));
-			if(gap > max) break;
-			gaps ~= cast(size_t)gap;
-			++k;
-		}
-		return gaps;
-	}
 	
 	/// A simple insertion sort used for sorting small sublists
 	void binaryInsertionSort(R range)
@@ -236,6 +196,33 @@ template UnstableSortImpl(alias pred, R)
 			}
 			for(upper = i; upper > lower; --upper) range[upper] = range[upper-1];
 			range[upper] = o;
+		}
+	}
+	
+	/// Shell sort is used to avoid the worst-case of quick sort
+	void shellSort(R range)
+	{
+		static immutable gaps = [
+			1147718699, 510097199, 226709865, 100759939, 44782195, 19903197, 
+			8845865, 3931495, 1747330, 776590, 345151, 153400, 68177, 30300, 
+			13466, 5984, 2659, 1750, 701, 301, 132, 57, 23, 10, 4, 1];
+		
+		T o; size_t i;
+		
+		foreach(gap; gaps) if(gap < range.length)
+		{
+			foreach(start; gap .. range.length) if(less(range[start], range[start - gap]))
+			{
+				i = start;
+				o = range[i];
+				do
+				{
+					range[i] = range[i - gap];
+					i -= gap;
+				}
+				while(i >= gap && less(o, range[i - gap]));
+				range[i] = o;
+			}
 		}
 	}
 }

@@ -8,7 +8,7 @@
 ++/
 
 module shellsort;
-import std.range, std.algorithm, std.functional, std.math;
+import std.range, std.algorithm, std.functional;
 
 /++
 	Performs a shell sort on a random-access range according to predicate less.
@@ -31,10 +31,15 @@ import std.range, std.algorithm, std.functional, std.math;
 	alias ElementType!R T;
 	alias binaryFun!less lessFun;
 	
-	immutable gaps = shellGaps(range.length);
+	// Gap sequence applicable up to uint.max length
+	static immutable gaps = [
+		1147718699, 510097199, 226709865, 100759939, 44782195, 19903197, 
+		8845865, 3931495, 1747330, 776590, 345151, 153400, 68177, 30300, 
+		13466, 5984, 2659, 1750, 701, 301, 132, 57, 23, 10, 4, 1];
+	
 	T o; size_t i;
 	
-	foreach_reverse(gap; gaps) if(gap < range.length)
+	foreach(gap; gaps) if(gap < range.length)
 	{
 		foreach(start; gap .. range.length) if(lessFun(range[start], range[start - gap]))
 		{
@@ -54,9 +59,11 @@ import std.range, std.algorithm, std.functional, std.math;
 	return assumeSorted!(less, R)(range.save);
 }
 
-/// Generates gap sequence for shell sort
-pure immutable(size_t)[] shellGaps(size_t len)
+// No longer used; Simply provided for reference
+version(none) pure immutable(size_t)[] shellGaps(size_t len)
 {
+	import std.math;
+	
 	immutable(size_t)[] gaps = [1, 4, 10, 23, 57, 132, 301, 701, 1750];
 	if(__ctfe) return gaps;
 	
