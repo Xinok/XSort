@@ -49,33 +49,34 @@ template HeapSortImpl(alias pred, bool ternary, R)
 	
 	alias ElementType!R T;
 	alias binaryFun!pred less;
-	enum  base = ternary ? 3 : 2;
+	
+	enum base = ternary ? 3 : 2;
 	
 	void sort(R range, bool heapifyMethod)
 	{
-		if(range.length > 1)
+		// Nothing to do
+		if(range.length < 2) return;
+		
+		size_t i = void;
+		immutable end = range.length - 1;
+		
+		// Heapify
+		if(heapifyMethod)
 		{
-			size_t i = void;
-			immutable end = range.length - 1;
-			
-			// Heapify
-			if(heapifyMethod)
-			{
-				for(i = 1; i < range.length; ++i) siftUp(range, i);
-			}
-			else
-			{
-				i = range.length / base;
-				while(i > 0) siftDown(range, --i, end);
-			}
-			
-			// Sort
-			i = end;
-			while(i > 0)
-			{
-				swap(range[i], range[0]);
-				siftDown(range, 0, --i);
-			}
+			for(i = 1; i < range.length; ++i) siftUp(range, i);
+		}
+		else
+		{
+			i = (range.length - 2) / base + 1;
+			while(i > 0) siftDown(range, --i, end);
+		}
+		
+		// Sort
+		i = end;
+		while(i > 0)
+		{
+			swap(range[i], range[0]);
+			siftDown(range, 0, --i);
 		}
 	}
 	
@@ -142,7 +143,6 @@ template HeapSortImpl(alias pred, bool ternary, R)
 	return assumeSorted!(less, R)(range.save);
 }
 
-/// Implementation of haider heap sort
 template HaiderImpl(alias pred, R)
 {
 	static assert(isRandomAccessRange!R);
@@ -158,7 +158,7 @@ template HaiderImpl(alias pred, R)
 	
 	void sort(R range)
 	{
-		size_t[100] sp; // Pass to heapify
+		size_t[48] sp = void; // Pass to heapify
 		
 		// Build Heap
 		foreach_reverse(i; 0 .. (range.length - 2) / 3 + 1)
@@ -166,25 +166,22 @@ template HaiderImpl(alias pred, R)
 		
 		// Sort Heap
 		T temp;
-		size_t end = range.length;
-		for(size_t i = range.length - 1; i > 0; --i)
+		foreach_reverse(i; 1 .. range.length)
 		{
 			temp = range[i];
 			range[i] = range[0];
-			--end;
-			heapify(range, sp, temp, 0, end);
+			heapify(range, sp, temp, 0, i);
 		}
 	}
 	
-	void heapify(R range, size_t[] sp, T temp, size_t root, size_t end)
+	void heapify(R range, size_t[] sp, T temp, size_t root, immutable size_t end)
 	{
-		size_t highest = root, child = 0, parent = 0, sl = 0;
+		size_t highest = root, child = 0, sl = 0;
 		sp[0] = root;
 		
-		while(highest < end)
+		while(true)
 		{
-			parent = highest;
-			child = 3 * parent + 1;
+			child = 3 * highest + 1;
 			
 			if(child >= end) break;
 			
@@ -223,6 +220,109 @@ template HaiderImpl(alias pred, R)
 	}
 }
 
+/++
+	Performs a bottom-up heap sort on a random-access range according to predicate less.
+	
+	Returns: Sorted input as SortedRange
+	
+	Params:
+	ternary = Set to true for ternary heap, or false for binary heap
+	
+	Examples:
+	-----------------
+	int[] array = [10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70];
+	bottomUpHeapSort(array);
+	bottomUpHeapSort!"a > b"(array);         // Sorts array descending
+	bottomUpHeapSort!("a < b", true)(array); // Sorts array using binary heap
+	-----------------
+++/
+
+@trusted SortedRange!(R, less) bottomUpHeapSort(alias less = "a < b", bool ternary = false, R)(R range)
+{
+	static assert(isRandomAccessRange!R);
+	static assert(hasLength!R);
+	static assert(hasAssignableElements!R);
+	
+	BottomUpHeapSortImpl!(less, ternary, R).sort(range);
+	
+	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
+	return assumeSorted!(less, R)(range.save);
+}
+
+template BottomUpHeapSortImpl(alias pred, bool ternary, R)
+{
+	static assert(isRandomAccessRange!R);
+	static assert(hasLength!R);
+	static assert(hasAssignableElements!R);
+	
+	alias ElementType!R T;
+	alias binaryFun!pred less;
+	
+	enum base = ternary ? 3 : 2;
+	
+	void sort(R range)
+	{
+		if(range.length < 2) return;
+		
+		// Heapify
+		size_t i = (range.length - 2) / base + 1;
+		while(i > 0) sift(range, --i, range.length);
+		
+		// Sort
+		i = range.length - 1;
+		while(i > 0)
+		{
+			swap(range[0], range[i]);
+			sift(range, 0, i);
+			--i;
+		}
+	}
+	
+	void sift(R range, size_t parent, immutable size_t end)
+	{
+		immutable root = parent;
+		T value = range[parent];
+		size_t child = void;
+		
+		// Sift down
+		while(true)
+		{
+			child = parent * base + 1;
+			
+			if(child >= end) break;
+			
+			if(child + 1 < end && less(range[child], range[child + 1]))
+			{
+				if(ternary && child + 2 < end && less(range[child + 1], range[child + 2]))
+					child += 2;
+				else
+					child += 1;
+			}
+			else if(ternary && child + 2 < end && less(range[child], range[child + 2]))
+				child += 2;
+			
+			range[parent] = range[child];
+			parent = child;
+		}
+		
+		child = parent;
+		
+		// Sift up
+		while(child > root)
+		{
+			parent = (child - 1) / base;
+			if(less(range[parent], value))
+			{
+				range[child] = range[parent];
+				child = parent;
+			}
+			else break;
+		}
+		
+		range[child] = value;
+	}
+}
+
 unittest
 {
 	bool testSort(alias pred, bool ternary, R)(R range, bool siftMethod)
@@ -234,6 +334,12 @@ unittest
 	bool testSort2(alias pred, R)(R range)
 	{
 		haiderHeapSort!(pred, R)(range);
+		return isSorted!pred(range);
+	}
+	
+	bool testSort3(alias pred, bool ternary, R)(R range)
+	{
+		bottomUpHeapSort!(pred, ternary, R)(range);
 		return isSorted!pred(range);
 	}
 	
@@ -255,6 +361,12 @@ unittest
 		
 		if(!testSort2!"a < b"(arr.dup)) ++failures;
 		if(!testSort2!"a > b"(arr.dup)) ++failures;
+		
+		if(!testSort3!("a < b", false)(arr.dup)) ++failures;
+		if(!testSort3!("a > b", false)(arr.dup)) ++failures;
+		
+		if(!testSort3!("a < b", true)(arr.dup)) ++failures;
+		if(!testSort3!("a > b", true)(arr.dup)) ++failures;
 		
 		return failures;
 	}
@@ -282,6 +394,6 @@ unittest
 	// CTFE Test
 	{
 		enum result = testCall(test);
-		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: unstableSort CTFE unittest failed ", result, " of 10 tests");
+		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: heap sort CTFE unittest failed ", result, " of 14 tests");
 	}
 }

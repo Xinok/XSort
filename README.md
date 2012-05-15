@@ -250,11 +250,24 @@ Heap sort combines in-place sorting with a **guaranteed** worst-case performance
 
 **Implementation**
 
-A standard heap sort uses a binary heap, which mean each node has two children. An alternative is to use a ternary heap, in which each node has three children. A ternary heap generally has faster performance and does fewer comparisons. 
+First is a standard heap sort. You may choose between a binary or ternary heap; The **ternary** heap is used by default. You may also choose between the sift-down or sift-up heapify method; The **sift-down** method is used by default.
 
-You may also choose between the sift-down or sift-up method for heapifying. The sift-down method walks in the direction of parent to child to child, while the sift-up method walks in reverse, of child to parent to parent. The sift-down method is used by default as it's generally faster as it only requires n/2 or n/3 passes, where as the sift-up method requires n passes.
+Second is a bottom-up heap sort. You may choose between a binary or ternary heap; The **binary** heap is used by default.
 
-There is also a variant as described by [Bahlul Haider](http://www.csd.uwo.ca/People/gradstudents/mhaider5/) [[PDF](http://www.csd.uwo.ca/People/gradstudents/mhaider5/pdf/A_New_Varient_of_Heapsort.pdf)] which does significantly fewer comparisons. This variant adds more overhead and is only recommended when comparisons are expensive.
+Third is a bottom-up ternary heap sort variant as described by [Bahlul Haider](http://www.csd.uwo.ca/People/gradstudents/mhaider5/) [[PDF](http://www.csd.uwo.ca/People/gradstudents/mhaider5/pdf/A_New_Varient_of_Heapsort.pdf)].
+
+~~~~~
+
+In a binary heap, each node has two children. In a ternary heap, each node has three children. A ternary heap tends to be faster and does fewer comparisons in a standard heap sort. A binary heap tends to do fewer comparisons in a bottom-up heap sort, though being slower when comparisons are cheap.
+
+The sift-down heapify method walks in the direction of parent to child to child. The sift-up heapify method walks in the direction of child to parent to parent. The sift-down method tends to be faster and does fewer comparisons as it only does n/2 or n/3 passes as opposed to sift-up which does n passes.
+
+A bottom-up heap sort sifts down the tree, pulling down each max element along the way, until there are no more children. Then it sifts up, looking for where to insert the current element. Because there are fewer elements towards the base of the tree, an element is more likely to be in place near the end of the path, which is why a bottom-up heap sort tends to do fewer comparisons. It's average case is better, but because it sifts down as far as possible, it's best case is far from that of a standard heap sort. As to why a binary heap is better than a ternary heap, I'm not sure.
+
+Best modes to use:
+
+- Standard Heap Sort = Ternary Heap and Sift-Down Heapify Method
+- Bottom-up Heap Sort = Binary Heap
 
 ----------
 
