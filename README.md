@@ -256,8 +256,6 @@ Second is a bottom-up heap sort. You may choose between a binary or ternary heap
 
 Third is a bottom-up ternary heap sort variant as described by [Bahlul Haider](http://www.csd.uwo.ca/People/gradstudents/mhaider5/) [[PDF](http://www.csd.uwo.ca/People/gradstudents/mhaider5/pdf/A_New_Varient_of_Heapsort.pdf)].
 
-~~~~~
-
 In a binary heap, each node has two children. In a ternary heap, each node has three children. A ternary heap tends to be faster and does fewer comparisons in a standard heap sort. A binary heap tends to do fewer comparisons in a bottom-up heap sort, though being slower when comparisons are cheap.
 
 The sift-down heapify method walks in the direction of parent to child to child. The sift-up heapify method walks in the direction of child to parent to parent. The sift-down method tends to be faster and does fewer comparisons as it only does n/2 or n/3 passes as opposed to sift-up which does n passes.
