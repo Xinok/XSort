@@ -83,7 +83,7 @@ template UnstableSortImpl(alias pred, R)
 			}
 			if(depth < 1.0)
 			{
-				shellSort(range);
+				heapSort(range);
 				return;
 			}
 			
@@ -115,7 +115,7 @@ template UnstableSortImpl(alias pred, R)
 		}
 		if(depth < 1.0)
 		{
-			shellSort(range);
+			heapSort(range);
 			return;
 		}
 		
@@ -199,31 +199,57 @@ template UnstableSortImpl(alias pred, R)
 		}
 	}
 	
-	/// Shell sort is used to avoid the worst-case of quick sort
-	void shellSort(R range)
+	/// Bottom-up binary heap sort is used to avoid the worst-case of quick sort
+	void heapSort(R range)
 	{
-		static immutable gaps = [
-			1147718699, 510097199, 226709865, 100759939, 44782195, 19903197, 
-			8845865, 3931495, 1747330, 776590, 345151, 153400, 68177, 30300, 
-			13466, 5984, 2659, 1750, 701, 301, 132, 57, 23, 10, 4, 1];
+		// Build Heap
+		size_t i = (range.length - 2) / 2 + 1;
+		while(i > 0) sift(range, --i, range.length);
 		
-		T o; size_t i;
-		
-		foreach(gap; gaps) if(gap < range.length)
+		// Sort
+		i = range.length - 1;
+		while(i > 0)
 		{
-			foreach(start; gap .. range.length) if(less(range[start], range[start - gap]))
-			{
-				i = start;
-				o = range[i];
-				do
-				{
-					range[i] = range[i - gap];
-					i -= gap;
-				}
-				while(i >= gap && less(o, range[i - gap]));
-				range[i] = o;
-			}
+			swap(range[0], range[i]);
+			sift(range, 0, i);
+			--i;
 		}
+	}
+	
+	void sift(R range, size_t parent, immutable size_t end)
+	{
+		immutable root = parent;
+		T value = range[parent];
+		size_t child = void;
+		
+		// Sift down
+		while(true)
+		{
+			child = parent * 2 + 1;
+			
+			if(child >= end) break;
+			
+			if(child + 1 < end && less(range[child], range[child + 1])) child += 1;
+			
+			range[parent] = range[child];
+			parent = child;
+		}
+		
+		child = parent;
+		
+		// Sift up
+		while(child > root)
+		{
+			parent = (child - 1) / 2;
+			if(less(range[parent], value))
+			{
+				range[child] = range[parent];
+				child = parent;
+			}
+			else break;
+		}
+		
+		range[child] = value;
 	}
 }
 

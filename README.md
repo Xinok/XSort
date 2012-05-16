@@ -64,7 +64,7 @@ It begins with a quick sort that chooses a pivot from a median of three, from th
 
 When a partition is small enough, binary insertion sort is used to sort small sublists of up to 32 elements. This increases performance as well as reduces the number of comparisons in an average case.
 
-If too many recursions occur, shell sort is used to avoid the worst case of quick sort. While heap sort is a more popular choice, I chose shell sort because I've typically found it to be faster and do fewer comparisons. It begins with the gap sequence, `[1, 4, 10, 23, 57, 132, 301, 701, 1750]`, and uses the formula, `(9 ^ k - 4 ^ k) / (5 * 4 ^ (k - 1))`, to generate larger gaps.
+If too many recursions occur, a bottom-up binary heap sort is used to avoid the worst case of quick sort. A bottom-up heap sort does nearly half the number of comparisons as a standard heap sort and about 50% less than shell sort. On top of that, it has O(1) space complexity. This makes it the ideal "fall-back" unstable sorting algorithm.
 
 ----------
 
