@@ -8,7 +8,7 @@
 ++/
 
 module unstablesort;
-import std.range, std.algorithm, std.functional, std.array, std.parallelism, std.math;
+import std.range, std.algorithm, std.functional, std.parallelism;
 
 /++
 	Performs an unstable sort on a random-access range according to predicate less.
@@ -87,8 +87,7 @@ template UnstableSortImpl(alias pred, R)
 				return;
 			}
 			
-			depth /= 2.0;
-			depth += depth / 2.0;
+			depth /= 1.5;
 			
 			immutable mid = partition(range);
 			
@@ -119,8 +118,7 @@ template UnstableSortImpl(alias pred, R)
 			return;
 		}
 		
-		depth /= 2.0;
-		depth += depth / 2.0;
+		depth /= 1.5;
 		
 		immutable mid = partition(range);
 		

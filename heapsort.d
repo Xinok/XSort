@@ -60,7 +60,7 @@ template HeapSortImpl(alias pred, bool ternary, R)
 		size_t i = void;
 		immutable end = range.length - 1;
 		
-		// Heapify
+		// Build Heap
 		if(heapifyMethod)
 		{
 			for(i = 1; i < range.length; ++i) siftUp(range, i);
@@ -84,9 +84,10 @@ template HeapSortImpl(alias pred, bool ternary, R)
 	{
 		size_t child = void;
 		T value = range[root];
-		while(root * base < end)
+		while(true)
 		{
 			child = root * base + 1;
+			if(child > end) break;
 			
 			if(child < end && less(range[child], range[child + 1]))
 			{
@@ -264,7 +265,7 @@ template BottomUpHeapSortImpl(alias pred, bool ternary, R)
 	{
 		if(range.length < 2) return;
 		
-		// Heapify
+		// Build Heap
 		size_t i = (range.length - 2) / base + 1;
 		while(i > 0) sift(range, --i, range.length);
 		

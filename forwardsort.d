@@ -73,8 +73,7 @@ template ForwardSortImpl(alias pred, R)
 			return;
 		}
 		
-		depth /= 2.0;
-		depth += depth / 2.0;
+		depth /= 1.5;
 		
 		size_t mid;
 		R lef;
@@ -102,8 +101,7 @@ template ForwardSortImpl(alias pred, R)
 				return;
 			}
 			
-			depth /= 2.0;
-			depth += depth / 2.0;
+			depth /= 1.5;
 			
 			size_t mid;
 			R lef;
