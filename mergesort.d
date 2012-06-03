@@ -205,6 +205,7 @@ template MergeSortImpl(alias pred, bool half, R)
 	}
 	
 	//@ Workaround for DMD issue 7898
+	static if(__VERSION__ == 2059)
 	void copy(R1, R2)(R1 src, R2 dst)
 	{
 		import std.traits;
