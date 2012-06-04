@@ -79,36 +79,14 @@ template TimSortImpl(alias pred, R)
 		immutable minRun    = minRunLength(range.length);
 		immutable minTemp   = range.length / 2 < MIN_STORAGE ? range.length / 2 : MIN_STORAGE;
 		size_t    minGallop = MIN_GALLOP;
-		Slice[]   stack;
+		Slice[40] stack     = void;
+		size_t    stackLen  = 0;
 		
 		// Allocate temporary memory if not provided by user
 		if(temp.length < minTemp)
 		{
 			if(__ctfe) temp.length = minTemp;
 			else temp = uninitializedArray!(T[])(minTemp);
-		}
-		
-		// Merge two runs in stack at (i, i + 1)
-		// Pops run from stack after merging
-		void mergeAt(immutable size_t i)
-		{
-			// Create local reference for efficiency
-			auto st = stack;
-			
-			assert(st.length >= 2);
-			
-			// Copy values to local variables for efficiency
-			immutable base = st[i].base;
-			immutable mid  = st[i].length;
-			immutable len  = st[i + 1].length + mid;
-			
-			// Merge runs at (i, i + 1)
-			merge(range[base .. base + len], mid, minGallop, temp);
-			
-			// Pop run from stack
-			st[i] = Slice(base, len);
-			if(i == st.length - 3) st[$ - 2] = st[$ - 1];
-			stack = st[0 .. $ - 1];
 		}
 		
 		for(size_t i = 0; i < range.length; )
@@ -126,32 +104,47 @@ template TimSortImpl(alias pred, R)
 			}
 			
 			// Push run onto stack
-			stack ~= Slice(i, runLen);
+			stack[stackLen++] = Slice(i, runLen);
 			i += runLen;
 			
 			// Collapse stack so that (e1 >= e2 + e3 && e2 >= e3)
-			while(stack.length > 1)
+			while(stackLen > 1)
 			{
-				if(stack.length >= 3 && stack[$ - 3].length <= stack[$ - 2].length + stack[$ - 1].length)
+				if(stackLen >= 3 && stack[stackLen - 3].length <= stack[stackLen - 2].length + stack[stackLen - 1].length)
 				{
-					if(stack[$ - 3].length <= stack[$ - 1].length)
-						mergeAt(stack.length - 3);
+					if(stack[stackLen - 3].length <= stack[stackLen - 1].length)
+					{
+						mergeAt(range, stack[0 .. stackLen], stackLen - 3, minGallop, temp);
+						--stackLen;
+					}
 					else
-						mergeAt(stack.length - 2);
+					{
+						mergeAt(range, stack[0 .. stackLen], stackLen - 2, minGallop, temp);
+						--stackLen;
+					}
 				}
-				else if(stack[$ - 2].length <= stack[$ - 1].length)
-					mergeAt(stack.length - 2);
+				else if(stack[stackLen - 2].length <= stack[stackLen - 1].length)
+				{
+					mergeAt(range, stack[0 .. stackLen], stackLen - 2, minGallop, temp);
+					--stackLen;
+				}
 				else break;
 			}
 		}
 		
 		// Force collapse stack until there is only one run left
-		while(stack.length > 1)
+		while(stackLen > 1)
 		{
-			if(stack.length >= 3 && stack[$ - 3].length <= stack[$ - 1].length)
-				mergeAt(stack.length - 3);
+			if(stackLen >= 3 && stack[stackLen - 3].length <= stack[stackLen - 1].length)
+			{
+				mergeAt(range, stack[0 .. stackLen], stackLen - 3, minGallop, temp);
+				--stackLen;
+			}
 			else
-				mergeAt(stack.length - 2);
+			{
+				mergeAt(range, stack[0 .. stackLen], stackLen - 2, minGallop, temp);
+				--stackLen;
+			}
 		}
 	}
 	
@@ -214,6 +207,28 @@ template TimSortImpl(alias pred, R)
 			for(upper = i; upper > lower; --upper) range[upper] = range[upper-1];
 			range[upper] = o;
 		}
+	}
+	
+	/// Merge two runs in stack (at, at + 1)
+	void mergeAt(R range, Slice[] stack, immutable size_t at, ref size_t minGallop, ref T[] temp)
+	in
+	{
+		assert(stack.length >= 2);
+		assert(at == stack.length - 2 || at == stack.length - 3);
+	}
+	body
+	{
+		// Just some values ...
+		immutable base = stack[at].base;
+		immutable mid  = stack[at].length;
+		immutable len  = stack[at + 1].length + mid;
+		
+		// Pop run froms tack
+		stack[at] = Slice(base, len);
+		if(at == stack.length - 3) stack[$ - 2] = stack[$ - 1];
+		
+		// Merge runs (at, at + 1)
+		return merge(range[base .. base + len], mid, minGallop, temp);
 	}
 	
 	/// Merge two runs in a range. Mid is the starting index of the second run.
