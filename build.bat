@@ -1,19 +1,17 @@
-rem DGUI Batch 12.06.04
+rem Batch 12.06.04
 
 echo off
 cls
 
-if EXIST build\benchsort.exe (
-del build\benchsort.exe
-)
+call clean.bat
+cls
 
 dmd @build.args
 
-if NOT EXIST build\benchsort.exe (
-echo Build Failed
+if NOT EXIST *.exe (
 pause
 exit
 )
-build\benchsort.exe
+start benchsort.exe
 pause
 exit

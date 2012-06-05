@@ -1,28 +1,24 @@
 module benchsort;
-import std.stdio, std.random, std.datetime, std.array, std.range, std.algorithm;
+import std.stdio, std.random, std.datetime, std.array, std.string, std.range, std.algorithm;
 import combsort, forwardsort, heapsort, insertionsort, mergesort, shellsort, stablesort, timsort, unstablesort;
 
-void benchSort(string name, lazy void call)
+void profileSort(string name, ulong bench, ulong count)
 {
-	StopWatch sw;
-	
-	sw.start();
-	call();
-	sw.stop();
-	
-	writeln(name, std.array.replicate(" ", 40 - name.length), sw.peek.msecs, "ms");
+	string tmp = format(bench, "ms");
+	tmp ~= std.array.replicate(" ", 10 - tmp.length);
+	writeln(name, std.array.replicate(" ", 40 - name.length), tmp, count);
 }
 
 void main()
 {
 	// Initialize test array
-	uint[] base;
+	static uint[] base;
 	base.length = 1024 * 1024;
 	foreach(i, ref v; base) v = i;
 	randomShuffle(base);
 	
 	// Initialize copy array
-	uint[] copy;
+	static uint[] copy;
 	copy.length = base.length;
 	
 	// Print information
@@ -30,101 +26,77 @@ void main()
 	writeln(typeid(base).toString, " * ", base.length);
 	writeln();
 	
+	// Profiling functions
+	static ulong comps;
+	
+	static bool pred(T)(T a, T b)
+	{
+		++comps;
+		return a < b;
+	}
+	
+	static ulong bench(lazy void run)
+	{
+		copy[] = base[];
+		StopWatch sw;
+		sw.start();
+		run();
+		sw.stop();
+		return sw.peek.msecs;
+	}
+	
+	static ulong count(lazy void run)
+	{
+		copy[] = base[];
+		comps = 0;
+		run();
+		return comps;
+	}
 	
 	// ------------
 	//  Benchmarks
 	// ------------
 	
-	copy[] = base[];
-	benchSort("Comb Sort Standard", combSort(copy));
+	profileSort("Comb Sort Standard", bench(combSort(copy)), count(combSort!pred(copy)));
+	profileSort("Comb Sort Linear", bench(combSortLinear(copy)), count(combSortLinear!pred(copy)));
+	profileSort("Comb Sort Gallop", bench(combSortGallop(copy)), count(combSortGallop!pred(copy)));
 	
-	copy[] = base[];
-	benchSort("Comb Sort Linear", combSortLinear(copy));
+	profileSort("Forward Sort", bench(forwardSort(copy, false)), count(forwardSort!pred(copy, false)));
+	profileSort("Forward Sort (Concurrent)", bench(forwardSort(copy, true)), comps);
 	
-	copy[] = base[];
-	benchSort("Comb Sort Gallop", combSortGallop(copy));
-	
-	copy[] = base[];
-	benchSort("Forward Sort", forwardSort(copy, false));
-	
-	copy[] = base[];
-	benchSort("Forward Sort (Concurrent)", forwardSort(copy, true));
-	
-	copy[] = base[];
-	benchSort("Heap Sort Standard Binary  Sift-Down", heapSort!("a < b", false)(copy, false));
-	
-	copy[] = base[];
-	benchSort("Heap Sort Standard Binary  Sift-Up", heapSort!("a < b", false)(copy, true));
-	
-	copy[] = base[];
-	benchSort("Heap Sort Standard Ternary Sift-Down", heapSort!("a < b", true)(copy, false));
-	
-	copy[] = base[];
-	benchSort("Heap Sort Standard Ternary Sift-Up", heapSort!("a < b", true)(copy, true));
-	
-	copy[] = base[];
-	benchSort("Heap Sort Bottom-Up Binary", bottomUpHeapSort!("a < b", false)(copy));
-	
-	copy[] = base[];
-	benchSort("Heap Sort Bottom-Up Ternary", bottomUpHeapSort!("a < b", true)(copy));
-	
-	copy[] = base[];
-	benchSort("Heap Sort by Haider", haiderHeapSort(copy));
+	profileSort("Heap Sort Standard Binary  Sift-Down", bench(heapSort!("a < b", false)(copy, false)), count(heapSort!(pred, false)(copy, false)));
+	profileSort("Heap Sort Standard Binary  Sift-Up", bench(heapSort!("a < b", false)(copy, true)), count(heapSort!(pred, false)(copy, true)));
+	profileSort("Heap Sort Standard Ternary Sift-Down", bench(heapSort!("a < b", true)(copy, false)), count(heapSort!(pred, true)(copy, false)));
+	profileSort("Heap Sort Standard Ternary Sift-Up", bench(heapSort!("a < b", true)(copy, true)), count(heapSort!(pred, true)(copy, true)));
+	profileSort("Heap Sort Bottom-Up Binary", bench(bottomUpHeapSort!("a < b", false)(copy)), count(bottomUpHeapSort!(pred, false)(copy)));
+	profileSort("Heap Sort Bottom-Up Ternary", bench(bottomUpHeapSort!("a < b", true)(copy)), count(bottomUpHeapSort!(pred, true)(copy)));
+	profileSort("Heap Sort by Haider", bench(haiderHeapSort(copy)), count(haiderHeapSort!pred(copy)));
 	
 	if(base.length <= 1024 * 64)
 	{
-		copy[] = base[];
-		benchSort("Insertion Sort Linear", insertionSort(copy));
-		
-		copy[] = base[];
-		benchSort("Insertion Sort Binary", insertionSort!("a < b", SearchPolicy.binarySearch)(copy));
-		
-		copy[] = base[];
-		benchSort("Insertion Sort Gallop", insertionSort!("a < b", SearchPolicy.gallop)(copy));
-		
-		copy[] = base[];
-		benchSort("Insertion Sort Trot", insertionSort!("a < b", SearchPolicy.trot)(copy));
+		profileSort("Insertion Sort Linear", bench(insertionSort(copy)), count(insertionSort!pred(copy)));
+		profileSort("Insertion Sort Binary", bench(insertionSort!("a < b", SearchPolicy.binarySearch)(copy)), count(insertionSort!(pred, SearchPolicy.binarySearch)(copy)));
+		profileSort("Insertion Sort Gallop", bench(insertionSort!("a < b", SearchPolicy.gallop)(copy)), count(insertionSort!(pred, SearchPolicy.gallop)(copy)));
+		profileSort("Insertion Sort Trot", bench(insertionSort!("a < b", SearchPolicy.trot)(copy)), count(insertionSort!(pred, SearchPolicy.trot)(copy)));
 	}
 	
-	copy[] = base[];
-	benchSort("Merge Sort O(n)", mergeSort!("a < b", false)(copy, false));
+	profileSort("Merge Sort O(n)", bench(mergeSort!("a < b", false)(copy, false)), count(mergeSort!(pred, false)(copy, false)));
+	profileSort("Merge Sort O(n)   (Concurrent)", bench(mergeSort!("a < b", false)(copy, true)), comps);
+	profileSort("Merge Sort O(n/2)", bench(mergeSort!("a < b", true)(copy, false)), comps);
+	profileSort("Merge Sort O(n/2) (Concurrent)", bench(mergeSort!("a < b", true)(copy, true)), comps);
 	
-	copy[] = base[];
-	benchSort("Merge Sort O(n)   (Concurrent)", mergeSort!("a < b", false)(copy, true));
+	profileSort("Shell Sort", bench(shellSort(copy)), count(shellSort!pred(copy)));
 	
-	copy[] = base[];
-	benchSort("Merge Sort O(n/2)", mergeSort!("a < b", true)(copy, false));
+	profileSort("Stable Sort", bench(stableSort!("a < b", false)(copy, false)), count(stableSort!(pred, false)(copy, false)));
+	profileSort("Stable Sort          (Concurrent)", bench(stableSort!("a < b", false)(copy, true)), comps);
+	profileSort("Stable Sort In-Place", bench(stableSort!("a < b", true)(copy, false)), count(stableSort!(pred, true)(copy, false)));
+	profileSort("Stable Sort In-Place (Concurrent)", bench(stableSort!("a < b", true)(copy, true)), comps);
 	
-	copy[] = base[];
-	benchSort("Merge Sort O(n/2) (Concurrent)", mergeSort!("a < b", true)(copy, true));
+	profileSort("Tim Sort", bench(timSort(copy)), count(timSort!pred(copy)));
 	
-	copy[] = base[];
-	benchSort("Shell Sort", shellSort(copy));
+	profileSort("Unstable Sort", bench(unstableSort(copy, false)), count(unstableSort!pred(copy, false)));
+	profileSort("Unstable Sort (Concurrent)", bench(unstableSort(copy, true)), comps);
 	
-	copy[] = base[];
-	benchSort("Stable Sort", stableSort!("a < b", false)(copy, false));
-	
-	copy[] = base[];
-	benchSort("Stable Sort          (Concurrent)", stableSort!("a < b", false)(copy, true));
-	
-	copy[] = base[];
-	benchSort("Stable Sort In-Place", stableSort!("a < b", true)(copy, false));
-	
-	copy[] = base[];
-	benchSort("Stable Sort In-Place (Concurrent)", stableSort!("a < b", true)(copy, true));
-	
-	copy[] = base[];
-	benchSort("Tim Sort", timSort(copy));
-	
-	copy[] = base[];
-	benchSort("Unstable Sort", unstableSort(copy, false));
-	
-	copy[] = base[];
-	benchSort("Unstable Sort (Concurrent)", unstableSort(copy, true));
-	
-	copy[] = base[];
-	benchSort("Phobos Sort Unstable", sort(copy));
-	
-	copy[] = base[];
-	benchSort("Phobos Sort Stable", sort!("a < b", SwapStrategy.stable)(copy));
+	profileSort("Phobos Sort Unstable", bench(sort(copy)), count(sort!pred(copy)));
+	profileSort("Phobos Sort Stable", bench(sort!("a < b", SwapStrategy.stable)(copy)), count(sort!(pred, SwapStrategy.stable)(copy)));
 }

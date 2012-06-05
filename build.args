@@ -8,8 +8,7 @@ shellsort.d
 stablesort.d
 timsort.d
 unstablesort.d
--odbuild
--ofbuild\benchsort.exe
+-ofbenchsort.exe
 -release
 -O
 -inline
