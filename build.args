@@ -1,0 +1,15 @@
+benchsort.d
+combsort.d
+forwardsort.d
+heapsort.d
+insertionsort.d
+mergesort.d
+shellsort.d
+stablesort.d
+timsort.d
+unstablesort.d
+-odbuild
+-ofbuild\benchsort.exe
+-release
+-O
+-inline
