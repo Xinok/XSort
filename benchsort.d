@@ -1,13 +1,6 @@
 module benchsort;
-import std.stdio, std.random, std.datetime, std.array, std.string, std.range, std.algorithm;
+import std.stdio, std.random, std.datetime, std.string, std.range, std.algorithm, std.md5;
 import combsort, forwardsort, heapsort, insertionsort, mergesort, shellsort, stablesort, timsort, unstablesort;
-
-void profileSort(string name, ulong bench, ulong count)
-{
-	string tmp = format(bench, "ms");
-	tmp ~= std.array.replicate(" ", 10 - tmp.length);
-	writeln(name, std.array.replicate(" ", 40 - name.length), tmp, count);
-}
 
 void main()
 {
@@ -20,6 +13,18 @@ void main()
 	// Initialize copy array
 	static uint[] copy;
 	copy.length = base.length;
+	
+	static void profileSort(string name, ulong bench, ulong count)
+	{
+		immutable blank = "                                                 ";
+		
+		name = (name ~ blank)[0..40];
+		string time = (format(bench, "ms") ~ blank)[0..10];
+		string comps = (format(count) ~ blank)[0..12];
+		string hash = getDigestString(copy)[0..8];
+		
+		writeln(name, time, comps, hash);
+	}
 	
 	// Print information
 	writeln(__VENDOR__, " ", __VERSION__);
@@ -98,5 +103,5 @@ void main()
 	profileSort("Unstable Sort (Concurrent)", bench(unstableSort(copy, true)), comps);
 	
 	profileSort("Phobos Sort Unstable", bench(sort(copy)), count(sort!pred(copy)));
-	profileSort("Phobos Sort Stable", bench(sort!("a < b", SwapStrategy.stable)(copy)), count(sort!(pred, SwapStrategy.stable)(copy)));
+	profileSort("Phobos Sort Stable (Broken)", bench(sort!("a < b", SwapStrategy.stable)(copy)), count(sort!(pred, SwapStrategy.stable)(copy)));
 }
