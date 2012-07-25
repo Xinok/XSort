@@ -12,7 +12,7 @@ import std.range, std.algorithm, std.functional, std.parallelism;
 
 /++
 	Performs an unstable sort on a random-access range according to predicate less.
-	The algorithm is a quick sort which resorts to shell sort to avoid worst-case.
+	The algorithm is a quick sort which resorts to heap sort to avoid worst-case.
 	
 	Returns: Sorted input as SortedRange
 	
@@ -131,22 +131,18 @@ template UnstableSortImpl(alias pred, R)
 	/// Partitions range, returns starting index of second range excluding pivot
 	size_t partition(R range)
 	{
-		T o;
+		// Get median of five
+		immutable b = range.length / 4, c = range.length / 2, d = b + c;
+		medianSort(range[0], range[b], range[c], range[d], range[range.length - 1]);
 		
-		// Median of Three
-		{
-			immutable low = 0, med = 1, hig = range.length - 1;
-			swap(range[range.length / 2], range[med]);
-			if(greater(range[low], range[med])) swap(range[low], range[med]);
-			if(greater(range[med], range[hig]))
-			{
-				swap(range[med], range[hig]);
-				if(greater(range[low], range[med])) swap(range[low], range[med]);
-			}
-		}
+		// Move first elements into place
+		swap(range[1], range[b]);
+		swap(range[2], range[c]);
+		swap(range[range.length - 2], range[d]);
 		
-		T piv = range[1];
-		size_t lef = 2, rig = range.length - 2;
+		// Variables
+		T piv = range[2], o;
+		size_t lef = 3, rig = range.length - 3;
 		
 		// Partition range
 		while(lef < rig)
@@ -159,6 +155,9 @@ template UnstableSortImpl(alias pred, R)
 				range[rig] = o;
 				--rig;
 			}
+			
+			// Checking for equality on both sides ensures a balanced
+			// distribution of equal elements in both partitions
 			if(greaterEqual(range[rig], piv)) --rig;
 			else
 			{
@@ -169,11 +168,52 @@ template UnstableSortImpl(alias pred, R)
 			}
 		}
 		
+		 // This step is necessary to ensure pivot is inserted at correct location
+		if(lessEqual(range[lef], piv)) ++lef;
 		// Move pivot into place
-		if(lessEqual(range[lef], piv)) ++lef; // This step is necessary and I'm not sure why
-		swap(range[lef - 1], range[1]);
+		swap(range[lef - 1], range[2]);
 		
 		return lef;
+	}
+	
+	/// Finds the median of five in six comparisons while satisfiying the condition: 
+	/// (a < c && b < c && c < d && d < e)
+	void medianSort(ref T a, ref T b, ref T c, ref T d, ref T e)
+	out
+	{
+		assert(lessEqual(a, c) && lessEqual(b, c) && lessEqual(c, d) && lessEqual(c, e));
+	}
+	body
+	{
+		T o;
+		
+		if(greater(a, b)) swap(a, b);
+		if(greater(d, e)) swap(d, e);
+		
+		if(greater(a, d))
+		{
+			o = a;
+			a = d;
+			d = b;
+			b = o;
+			if(greater(c, e))
+			{
+				o = c;
+				c = d;
+				d = e;
+				e = o;
+			}
+			else swap(c, d);
+		}
+		else if(greater(b, c)) swap(b, c);
+		
+		if(greater(b, d))
+		{
+			swap(b, d);
+			swap(c, e);
+		}
+		
+		if(greater(c, d)) swap(c, d);
 	}
 	
 	/// A simple insertion sort used for sorting small sublists
