@@ -290,7 +290,6 @@ There seems to be little use for a stable quick sort, as in nearly all cases, an
 
 **Features**
 
-* Concurrently sort range in multiple threads (requires multiple allocations)
 * Provide your own temporary memory (useful to avoid multiple allocations)
 * Sort in-place without using any additional space (but at the cost of performance)
 
