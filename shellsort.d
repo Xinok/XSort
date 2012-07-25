@@ -59,7 +59,7 @@ import std.range, std.algorithm, std.functional;
 	return assumeSorted!(less, R)(range.save);
 }
 
-// No longer used; Simply provided for reference
+// No longer used; Provided merely for reference
 version(none) pure immutable(size_t)[] shellGaps(size_t len)
 {
 	import std.math;

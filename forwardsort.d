@@ -32,6 +32,8 @@ void forwardSort(alias less = "a < b", R)(R range, bool threaded = false)
 {
 	static assert(isForwardRange!R);
 	static assert(!isInfinite!R);
+	static assert(hasSwappableElements!R);
+	static assert(hasAssignableElements!R);
 	
 	ForwardSortImpl!(less, R).sort(range, threaded);
 	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
@@ -42,6 +44,8 @@ template ForwardSortImpl(alias pred, R)
 {
 	static assert(isForwardRange!R);
 	static assert(!isInfinite!R);
+	static assert(hasSwappableElements!R);
+	static assert(hasAssignableElements!R);
 	
 	alias ElementType!R T;
 	
