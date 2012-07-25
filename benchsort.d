@@ -1,6 +1,6 @@
 module benchsort;
 import std.stdio, std.random, std.datetime, std.string, std.range, std.algorithm, std.md5;
-import combsort, forwardsort, heapsort, insertionsort, mergesort, shellsort, stablesort, timsort, unstablesort;
+import combsort, forwardsort, heapsort, insertionsort, mergesort, shellsort, stablequicksort, stablesort, timsort, unstablesort;
 
 void main()
 {
@@ -13,18 +13,6 @@ void main()
 	// Initialize copy array
 	static uint[] copy;
 	copy.length = base.length;
-	
-	static void profileSort(string name, ulong bench, ulong count)
-	{
-		immutable blank = "                                                 ";
-		
-		name = (name ~ blank)[0..40];
-		string time = (format(bench, "ms") ~ blank)[0..10];
-		string comps = (format(count) ~ blank)[0..12];
-		string hash = getDigestString(copy)[0..8];
-		
-		writeln(name, time, comps, hash);
-	}
 	
 	// Print information
 	writeln(__VENDOR__, " ", __VERSION__);
@@ -58,6 +46,18 @@ void main()
 		return comps;
 	}
 	
+	static void profileSort(string name, ulong bench, ulong count)
+	{
+		immutable blank = "                                                 ";
+		
+		name = (name ~ blank)[0..40];
+		string time = ((bench > 0 ? format(bench, "ms") : "???") ~ blank)[0..10];
+		string comps = ((count > 0 ? format(count) : "???") ~ blank)[0..12];
+		string hash = getDigestString(copy)[0..8];
+		
+		writeln(name, time, comps, hash);
+	}
+	
 	// ------------
 	//  Benchmarks
 	// ------------
@@ -75,7 +75,6 @@ void main()
 	profileSort("Heap Sort Standard Ternary Sift-Up", bench(heapSort!("a < b", true)(copy, true)), count(heapSort!(pred, true)(copy, true)));
 	profileSort("Heap Sort Bottom-Up Binary", bench(bottomUpHeapSort!("a < b", false)(copy)), count(bottomUpHeapSort!(pred, false)(copy)));
 	profileSort("Heap Sort Bottom-Up Ternary", bench(bottomUpHeapSort!("a < b", true)(copy)), count(bottomUpHeapSort!(pred, true)(copy)));
-	profileSort("Heap Sort by Haider", bench(haiderHeapSort(copy)), count(haiderHeapSort!pred(copy)));
 	
 	if(base.length <= 1024 * 64)
 	{
@@ -92,10 +91,13 @@ void main()
 	
 	profileSort("Shell Sort", bench(shellSort(copy)), count(shellSort!pred(copy)));
 	
+	profileSort("Stable Quick Sort", bench(stableQuickSort!("a < b", false)(copy)), count(stableQuickSort!(pred, false)(copy)));
+	profileSort("Stable Quick Sort In-Place", bench(stableQuickSort!("a < b", true)(copy)), count(stableQuickSort!(pred, true)(copy)));
+	
 	profileSort("Stable Sort", bench(stableSort!("a < b", false)(copy, false)), count(stableSort!(pred, false)(copy, false)));
-	profileSort("Stable Sort          (Concurrent)", bench(stableSort!("a < b", false)(copy, true)), comps);
+	profileSort("Stable Sort          (Concurrent)", bench(stableSort!("a < b", false)(copy, true)), 0);
 	profileSort("Stable Sort In-Place", bench(stableSort!("a < b", true)(copy, false)), count(stableSort!(pred, true)(copy, false)));
-	profileSort("Stable Sort In-Place (Concurrent)", bench(stableSort!("a < b", true)(copy, true)), comps);
+	profileSort("Stable Sort In-Place (Concurrent)", bench(stableSort!("a < b", true)(copy, true)), 0);
 	
 	profileSort("Tim Sort", bench(timSort(copy)), count(timSort!pred(copy)));
 	

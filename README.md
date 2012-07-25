@@ -26,9 +26,11 @@ Stable sorting preserves the original order of equal elements. This is often nec
 
 **Implementation**
 
+The algorithm is a natural merge sort with reduced space complexity. A natural merge sort performs best on lists with low entropy.
+
 For additional space, up to 1KiB may be allocated on the stack (using alloca()), and anything larger will be allocated on the heap. When sorting in-place, no additional space is allocated.
 
-It begins with a natural merge sort which scans the list from left to right, looking for "runs" in ascending or descending order and merging them. A 'run' is a sublist of elements that is already sorted. If the elements are in descending order, it will reverse them.
+It begins by scanning the list from left to right, looking for "runs" in ascending or descending order and merging them. A 'run' is a sublist of elements that is already sorted. If the elements are in descending order, it will reverse them.
 
 If a run is too small, a binary insertion sort is used to build the run up to MIN_RUN length (32 elements long).
 
@@ -37,6 +39,8 @@ When merging, one of the two halves is copied into temporary memory and then mer
 Rotations are used to reduce two runs into four smaller runs. It's difficult to explain how or why this works. This is done recursively until the runs are small enough to fit into the additional space.
 
 An optional template argument, inPlace, when set to true, utilizes no *additional space* at the cost of performance. In-place merging is done using insertions rather than temporary memory.
+
+**Concurrent sorting** is done by slicing the range into multiple parts of equal length for each thread, then merging these parts at the end. This doesn't take advantage of natural sorting, but is much faster on random data.
 
 
 ----------
@@ -60,11 +64,17 @@ Unstable sorting doesn't preserve the original order of equal elements but is of
 
 **Implementation**
 
-It begins with a quick sort that chooses a pivot from a median of three, from the first, middle, and last elements. The partitioning method used works well when several elements are equal to the pivot.
+The algorithm is, in essence, an intro sort, meaning a quick sort which falls back to a heap sort after too many recursions to guarantee O(n log n) worst case performance.
+
+The pivot for quick sort is chosen from a median of five in six comparisons. The method used satisfies the condition, a < c && b < c && c < d && c < e. This means the first five elements can be partitioned without any additional comparisons after the median is found.
+
+The partition method for quick sort attempts to divide elements equal to the pivot into both partitions. So if many elements are equal to the pivot, the pivot should end up closer to the center, resulting in faster performance and fewer comparisons.
 
 When a partition is small enough, binary insertion sort is used to sort small sublists of up to 32 elements. This increases performance as well as reduces the number of comparisons in an average case.
 
 If too many recursions occur, a bottom-up binary heap sort is used to avoid the worst case of quick sort. A bottom-up heap sort does nearly half the number of comparisons as a standard heap sort and about 50% less than shell sort. On top of that, it has O(1) space complexity. This makes it the ideal "fall-back" unstable sorting algorithm.
+
+**Concurrent sorting** is done by creating a new task for sublists greater than 64k elements in length. All of these tasks are executed in a task pool using a fixed number of threads. This method achieves greater performance, even if a few bad pivots are chosen.
 
 ----------
 
@@ -94,6 +104,8 @@ It begins with a quick sort using a partitioning method which I like to call "ca
 When a partition is small enough, binary insertion sort is used to sort small sublists. Up to 32 elements are copied into a static array on the stack, sorted, and copied back. This increases performance as well as reduces the number of comparisons in an average case.
 
 If too many recursions occur, comb sort is used to avoid the worst case of quick sort. A shrink factor of 1.2473 is used. Comb sort works well with forward ranges, and although it still has a worst-case of O(n^2), it's unlikely to happen in regular usage.
+
+**Concurrent sorting** is done by creating a new task for sublists greater than 64k elements in length. All of these tasks are executed in a task pool using a fixed number of threads. This method achieves greater performance, even if a few bad pivots are chosen.
 
 ----------
 
@@ -199,7 +211,7 @@ I've always favored shell sort for it's acceptable worst case performance, O(1) 
 
 **Implementation**
 
-A standard shell sort implementation. It uses the gap sequence, `[1147718699, 510097199, 226709865, 100759939, 44782195, 19903197, 8845865, 3931495, 1747330, 776590, 345151, 153400, 68177, 30300, 13466, 5984, 2659, 1750, 701, 301, 132, 57, 23, 10, 4, 1]`. Gaps greater than 1750 were derived from the formula, `(9 ^ k - 4 ^ k) / (5 * 4 ^ (k - 1))`.
+A standard shell sort implementation. The lower part of the gap sequence is the best known, [1750, 701, 301, 132, 57, 23, 10, 4, 1]. Larger gaps were calculated using the formula, `(9 ^ k - 4 ^ k) / (5 * 4 ^ (k - 1))`.
 
 ----------
 
@@ -228,6 +240,8 @@ Second is a merge sort using O(n/2) additional space. It accomplishes this by co
 
 Binary insertion sort is used to sort small sublists of up to 32 elements. This increases performance, but doesn't necessarily reduce the number of comparisons.
 
+**Concurrent sorting** is done by slicing the range into multiple parts of equal length for each thread, then merging these parts at the end.
+
 ----------
 
 # heapsort.d #
@@ -254,8 +268,6 @@ First is a standard heap sort. You may choose between a binary or ternary heap; 
 
 Second is a bottom-up heap sort. You may choose between a binary or ternary heap; The **binary** heap is used by default.
 
-Third is a bottom-up ternary heap sort variant as described by [Bahlul Haider](http://www.csd.uwo.ca/People/gradstudents/mhaider5/) [[PDF](http://www.csd.uwo.ca/People/gradstudents/mhaider5/pdf/A_New_Varient_of_Heapsort.pdf)].
-
 In a binary heap, each node has two children. In a ternary heap, each node has three children. A ternary heap tends to be faster and does fewer comparisons in a standard heap sort. A binary heap tends to do fewer comparisons in a bottom-up heap sort, though being slower when comparisons are cheap.
 
 The sift-down heapify method walks in the direction of parent to child to child. The sift-up heapify method walks in the direction of child to parent to parent. The sift-down method tends to be faster and does fewer comparisons as it only does n/2 or n/3 passes as opposed to sift-up which does n passes.
@@ -269,10 +281,48 @@ Best modes to use:
 
 ----------
 
+# stablequicksort.d #
+A stable quick sort for random-access ranges
+
+There seems to be little use for a stable quick sort, as in nearly all cases, an equivalent merge sort will outperform it. However, there is merit in a stable partition function, which is why I chose to write this module.
+
+> **WARNING:** This has a worst case performance of O(n^2/3). It's highly recommended to use merge sort or tim sort instead.
+
+**Features**
+
+* Concurrently sort range in multiple threads (requires multiple allocations)
+* Provide your own temporary memory (useful to avoid multiple allocations)
+* Sort in-place without using any additional space (but at the cost of performance)
+
+**Attributes**
+
+* Stable
+* O(n) best case
+* O(n log n) average case
+* O(n^2/3) worst case
+* O(log n log n) auxiliary space complexity
+* O(log n) auxiliary space complexity (in-place)
+
+**Implementation**
+
+The algorithm is a 3-way stable quick sort, meaning elements are divided into three groups by pivot: [less than, equal to, greater than]. The best case is only achieved when all elements are equal to the pivot. There is no fall-back algorithm, as the lower space complexity would require implementing an in-place merge sort to suit.
+
+The pivot is chosen from a median of five in six comparisons. Besides for generally choosing a better pivot, this guarantees that each partition contains at least three elements on each pass, reducing the worst-case by a third.
+
+Partitioning works by scanning the list from left to right, grouping elements that are less than, equal to, or greater than the pivot. The size of the resulting partition depends on the distribution of these elements.
+
+If using additional space, elements less than are written in-place, while elements equal or greater than are stored in the additional space, with equal elements being stored at the end in reverse order. Once the additional space is full, the elements are copied back.
+
+If sorting in-place, elements are rearranged using insertions. It continues to sort until the cost of insertions is too expensive. It stops when it takes more than 32 insertions to move an element into place.
+
+Initially, only several small sublists are partitioned. The elements in these sublists are then brought together by rotating elements between two sublists at a time, until the entire range is properly partitioned.
+
+When a partition is small enough, binary insertion sort is used to sort small sublists of up to 32 elements. This increases performance as well as reduces the number of comparisons in an average case.
+
+----------
+
 
 # Other Algorithms #
-
-**Stable quick sort** - It is possible to write a stable quick sort, though there's no reason to use it over merge sort. I plan to write a module with three levels of space complexity: O(n), O(log n log n), and O(log n) in-place.
 
 **Smooth sort** - A natural heap sort variant using leonardo numbers. An implementation in D can be found [here](https://github.com/deadalnix/Dsort/blob/master/sort/smooth.d), albeit it is broken.
 

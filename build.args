@@ -5,10 +5,9 @@ heapsort.d
 insertionsort.d
 mergesort.d
 shellsort.d
+stablequicksort.d
 stablesort.d
 timsort.d
 unstablesort.d
 -ofbenchsort.exe
--release
--O
--inline
+-Dddoc
