@@ -1,5 +1,6 @@
 module benchsort;
 import std.stdio, std.random, std.datetime, std.string, std.range, std.algorithm, std.md5;
+import core.memory;
 import combsort, forwardsort, heapsort, insertionsort, mergesort, shellsort, stablequicksort, stablesort, timsort, unstablesort;
 
 void main()
@@ -30,11 +31,13 @@ void main()
 	
 	static ulong bench(lazy void run)
 	{
+		GC.disable();
 		copy[] = base[];
 		StopWatch sw;
 		sw.start();
 		run();
 		sw.stop();
+		GC.enable();
 		return sw.peek.msecs;
 	}
 	
