@@ -241,52 +241,45 @@ template StableQuickSortImpl(alias pred, bool inPlace, R)
 		
 		static if(inPlace)
 		{
-			T o; size_t k;
+			T o;
 			
 			while(p3 - p1 < MAX_INSERT)
 			{
-				if(less(range[i], pivot))
+				if(less(range[p3], pivot))
 				{
-					o = range[i];
-					for(k = i; k > p1; --k) range[k] = range[k - 1];
-					range[k] = o;
-					++p1; ++p2; ++p3;
+					o = range[p3];
+					for(i = p3; i > p1; --i) range[i] = range[i - 1];
+					range[i] = o;
+					++p1; ++p2;
 				}
-				else if(greater(range[i], pivot))
+				else if(greater(range[p3], pivot)){ }
+				else // Equal to pivot
 				{
-					++p3;
-				}
-				else // equal to pivot
-				{
-					o = range[i];
-					for(k = i; k > p2; --k) range[k] = range[k - 1];
-					range[k] = o;
-					++p2; ++p3;
+					o = range[p3];
+					for(i = p3; i > p2; --i) range[i] = range[i - 1];
+					range[i] = o;
+					++p2;
 				}
 				
-				if(++i >= range.length) break;
+				if(++p3 >= range.length) break;
 				
-				// Repeat, but with less/greater swapped
-				if(greater(range[i], pivot))
+				if(greater(range[p3], pivot)){ }
+				else if(less(range[p3], pivot))
 				{
-					++p3;
+					o = range[p3];
+					for(i = p3; i > p1; --i) range[i] = range[i - 1];
+					range[i] = o;
+					++p1; ++p2;
 				}
-				else if(less(range[i], pivot))
+				else // Equal to pivot
 				{
-					o = range[i];
-					for(k = i; k > p1; --k) range[k] = range[k - 1];
-					range[k] = o;
-					++p1; ++p2; ++p3;
-				}
-				else // equal to pivot
-				{
-					o = range[i];
-					for(k = i; k > p2; --k) range[k] = range[k - 1];
-					range[k] = o;
-					++p2; ++p3;
+					o = range[p3];
+					for(i = p3; i > p2; --i) range[i] = range[i - 1];
+					range[i] = o;
+					++p2;
 				}
 				
-				if(++i >= range.length) break;
+				if(++p3 >= range.length) break;
 			}
 		}
 		
@@ -296,10 +289,10 @@ template StableQuickSortImpl(alias pred, bool inPlace, R)
 			auto parts = partition3(range[p3 .. range.length], temp, pivot, p3);
 			size_t p4 = parts[0] + p3, p5 = parts[1] + p3, p6 = parts[2] + p3;
 			
-			rotate(range[p2 .. p3], range[p3 .. p4]);
+			rotate(range[p2 .. p4], p3 - p2, temp);
 			p3 = p4 - (p3 - p2);
-			rotate(range[p1 .. p2], range[p2 .. p3]);
-			rotate(range[p3 .. p4], range[p4 .. p5]);
+			rotate(range[p1 .. p3], p2 - p1, temp);
+			rotate(range[p3 .. p5], p4 - p3, temp);
 			p2 = p3 - (p2 - p1);
 			p4 = p5 - (p4 - p3);
 			
@@ -311,48 +304,48 @@ template StableQuickSortImpl(alias pred, bool inPlace, R)
 		return [p1, p2, p3];
 	}
 	
-	/// Rotate elements in two ranges of any length
-	void rotate(R lef, R rig)
-	{
-		//@ Optimize using additional space
-		
-		while(true)
-		{
-			if(lef.length <= rig.length)
-			{
-				if(lef.length == 0) return;
-				swapBlocks(lef, rig[0..lef.length]);
-				
-				immutable lef_t = lef.length;
-				lef = rig[0 .. lef.length];
-				rig = rig[lef_t .. rig.length];
-			}
-			else
-			{
-				if(rig.length == 0) return;
-				immutable lef_t = lef.length - rig.length;
-				swapBlocks(lef[lef_t .. lef.length], rig);
-				
-				rig = lef[lef_t .. lef.length];
-				lef = lef[0 .. lef_t];
-			}
-		}
-	}
-	
-	/// Swap elements in two ranges of equal length
-	void swapBlocks(R lef, R rig)
+	/// Rotate elements on 'mid' axis
+	void rotate(R range, size_t mid, T[] temp)
 	in
 	{
-		assert(lef.length == rig.length);
+		assert(mid <= range.length);
 	}
 	body
 	{
 		T o;
-		foreach(i; 0 .. lef.length)
+		while(true)
 		{
-			o = lef[i];
-			lef[i] = rig[i];
-			rig[i] = o;
+			immutable nu = range.length - mid;
+			
+			if(mid <= range.length / 2)
+			{
+				if(mid == 0) return;
+				else static if(!inPlace) if(mid <= temp.length)
+				{
+					foreach(i; 0 .. mid) temp[i] = range[i];
+					foreach(i; 0 .. nu) range[i] = range[i + mid];
+					foreach(i; 0 .. mid) range[nu + i] = temp[i];
+					return;
+				}
+				
+				foreach(i; 0 .. mid) swap(range[i], range[i + mid]);
+				range = range[mid .. range.length];
+			}
+			else
+			{
+				if(mid == range.length) return;
+				else static if(!inPlace) if(range.length - mid <= temp.length)
+				{
+					foreach(i; mid .. range.length) temp[i - mid] = range[i];
+					foreach_reverse(i; nu .. range.length) range[i] = range[i - nu];
+					foreach(i; 0 .. nu) range[i] = temp[i];
+					return;
+				}
+				
+				foreach(i; mid - nu .. mid) swap(range[i], range[i + nu]);
+				range = range[0 .. mid];
+				mid = mid - nu;
+			}
 		}
 	}
 	
