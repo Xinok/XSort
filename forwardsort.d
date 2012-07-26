@@ -32,7 +32,6 @@ void forwardSort(alias less = "a < b", R)(R range, bool threaded = false)
 {
 	static assert(isForwardRange!R);
 	static assert(!isInfinite!R);
-	static assert(hasSwappableElements!R);
 	static assert(hasAssignableElements!R);
 	
 	ForwardSortImpl!(less, R).sort(range, threaded);
@@ -44,7 +43,6 @@ template ForwardSortImpl(alias pred, R)
 {
 	static assert(isForwardRange!R);
 	static assert(!isInfinite!R);
-	static assert(hasSwappableElements!R);
 	static assert(hasAssignableElements!R);
 	
 	alias ElementType!R T;
@@ -140,7 +138,7 @@ template ForwardSortImpl(alias pred, R)
 			{
 				++mid;
 				lef.popFront();
-				swap(lef.front, rig.front);
+				swapFront(lef, rig);
 			}
 			rig.popFront();
 			++i;
@@ -150,13 +148,13 @@ template ForwardSortImpl(alias pred, R)
 			{
 				++mid;
 				lef.popFront();
-				swap(lef.front, rig.front);
+				swapFront(lef, rig);
 			}
 			rig.popFront();
 			++i;
 		}
 		
-		swap(range.front, lef.front);
+		swapFront(range, lef);
 		lef.popFront();
 		
 		range_out = lef.save;
@@ -182,7 +180,7 @@ template ForwardSortImpl(alias pred, R)
 			{
 				if(less(rig.front, lef.front))
 				{
-					swap(lef.front, rig.front);
+					swapFront(lef, rig);
 					swapped = true;
 				}
 				lef.popFront();
@@ -231,6 +229,14 @@ template ForwardSortImpl(alias pred, R)
 			temp.front = v;
 			temp.popFront();
 		}
+	}
+	
+	/// Swap front elements of two forward ranges
+	void swapFront(R a, R b)
+	{
+		auto o = a.front;
+		a.front = b.front;
+		b.front = o;
 	}
 }
 
