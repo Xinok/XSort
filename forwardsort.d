@@ -234,9 +234,13 @@ template ForwardSortImpl(alias pred, R)
 	/// Swap front elements of two forward ranges
 	void swapFront(R a, R b)
 	{
-		auto o = a.front;
-		a.front = b.front;
-		b.front = o;
+		static if(hasSwappableElements!R) swap(a.front, b.front);
+		else
+		{
+			auto o = a.front;
+			a.front = b.front;
+			b.front = o;
+		}
 	}
 }
 
