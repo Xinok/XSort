@@ -1,5 +1,5 @@
 module benchsort;
-import std.stdio, std.random, std.datetime, std.string, std.range, std.algorithm, std.md5;
+import std.stdio, std.random, std.datetime, std.string, std.range, std.algorithm, std.md5, std.container;
 import core.memory;
 import combsort, forwardsort, heapsort, insertionsort, mergesort, shellsort, stablequicksort, stablesort, timsort, unstablesort;
 
@@ -71,6 +71,18 @@ void main()
 	
 	profileSort("Forward Sort", bench(forwardSort(copy, false)), count(forwardSort!pred(copy, false)));
 	profileSort("Forward Sort (Concurrent)", bench(forwardSort(copy, true)), comps);
+	
+	{
+		auto sl = SList!(ElementType!(typeof(base)))(base);
+		auto bm = bench(forwardSort(sl.opSlice(), false));
+		std.algorithm.copy(sl[], copy);
+		profileSort("Forward Sort SList", bm, comps);
+		
+		sl = SList!(ElementType!(typeof(base)))(base);
+		bm = bench(forwardSort(sl.opSlice(), true));
+		std.algorithm.copy(sl[], copy);
+		profileSort("Forward Sort SList (Concurrent)", bm, comps);
+	}
 	
 	profileSort("Heap Sort Standard Binary  Sift-Down", bench(heapSort!("a < b", false)(copy, false)), count(heapSort!(pred, false)(copy, false)));
 	profileSort("Heap Sort Standard Binary  Sift-Up", bench(heapSort!("a < b", false)(copy, true)), count(heapSort!(pred, false)(copy, true)));
