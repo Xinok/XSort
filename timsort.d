@@ -198,13 +198,17 @@ template TimSortImpl(alias pred, R)
 			o = range[i];
 			lower = 0;
 			upper = i;
+			
+			// Binary search
 			while(upper != lower)
 			{
 				center = (lower + upper) / 2;
 				if(less(o, range[center])) upper = center;
 				else lower = center + 1;
 			}
-			for(upper = i; upper > lower; --upper) range[upper] = range[upper-1];
+			
+			// Insertion
+			for(upper = i; upper > lower; --upper) range[upper] = range[upper - 1];
 			range[upper] = o;
 		}
 	}
@@ -305,13 +309,17 @@ template TimSortImpl(alias pred, R)
 		
 		// Copy run into temporary memory
 		temp = temp[0 .. mid];
-		copy(range[0..mid], temp);
+		copy(range[0 .. mid], temp);
 		
-		size_t i = 0, lef = 0, rig = mid;
+		// Move first element into place
+		range[0] = range[mid];
+		
+		size_t i = 1, lef = 0, rig = mid + 1;
 		size_t count_lef, count_rig;
+		immutable lef_end = temp.length - 1;
 		
-		outer:
-		while(true)
+		if(lef < lef_end && rig < range.length)
+		outer: while(true)
 		{
 			count_lef = 0;
 			count_rig = 0;
@@ -322,18 +330,14 @@ template TimSortImpl(alias pred, R)
 				if(lessEqual(temp[lef], range[rig]))
 				{
 					range[i++] = temp[lef++];
-					if(lef >= temp.length) break outer;
+					if(lef >= lef_end) break outer;
 					++count_lef;
 					count_rig = 0;
 				}
 				else
 				{
 					range[i++] = range[rig++];
-					if(rig >= range.length) while(true)
-					{
-						range[i++] = temp[lef++];
-						if(lef >= temp.length) break outer;
-					}
+					if(rig >= range.length) break outer;
 					count_lef = 0;
 					++count_rig;
 				}
@@ -361,6 +365,12 @@ template TimSortImpl(alias pred, R)
 			minGallop += 2;
 		}
 		
+		// Move remaining elements from right
+		while(rig < range.length) range[i++] = range[rig++];
+		
+		// Move remaining elements from left
+		while(lef < temp.length) range[i++] = temp[lef++];
+		
 		return minGallop > 0 ? minGallop : 1;
 	}
 	
@@ -380,7 +390,10 @@ template TimSortImpl(alias pred, R)
 		temp = temp[0 .. range.length - mid];
 		copy(range[mid .. range.length], temp);
 		
-		size_t i = range.length - 1, lef = mid - 1, rig = temp.length - 1;
+		// Move first element into place
+		range[range.length - 1] = range[mid - 1];
+		
+		size_t i = range.length - 2, lef = mid - 2, rig = temp.length - 1;
 		size_t count_lef, count_rig;
 		
 		outer:
@@ -395,7 +408,21 @@ template TimSortImpl(alias pred, R)
 				if(greaterEqual(temp[rig], range[lef]))
 				{
 					range[i--] = temp[rig];
-					if(rig == 0) break outer;
+					if(rig == 1)
+					{
+						// Move remaining elements from left
+						while(true)
+						{
+							range[i--] = range[lef];
+							if(lef == 0) break;
+							--lef;
+						}
+						
+						// Move last element into place
+						range[i] = temp[0];
+						
+						break outer;
+					}
 					--rig;
 					count_lef = 0;
 					++count_rig;
