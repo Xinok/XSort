@@ -1,7 +1,7 @@
 /++
 	Tim Sort for Random-Access Ranges
 	
-	Written and tested for DMD 2.059 and Phobos
+	Written and tested for DMD 2.060 and Phobos
 	
 	Authors:  Xinok
 	License:  Public Domain
@@ -60,7 +60,7 @@ template TimSortImpl(alias pred, R)
 	bool greaterEqual(T a, T b){ return !less(a, b); }
 	bool lessEqual(T a, T b){ return !less(b, a); }
 
-	enum MIN_MERGE   = 32;
+	enum MIN_MERGE   = 64;
 	enum MIN_GALLOP  = 7;
 	enum MIN_STORAGE = 256;
 	
@@ -70,17 +70,19 @@ template TimSortImpl(alias pred, R)
 	void sort(R range, T[] temp)
 	{
 		// Do insertion sort on small range
-		if(range.length <= MIN_MERGE)
+		if(range.length <= 256)
 		{
 			binaryInsertionSort(range);
 			return;
 		}
 		
-		immutable minRun    = minRunLength(range.length);
-		immutable minTemp   = range.length / 2 < MIN_STORAGE ? range.length / 2 : MIN_STORAGE;
-		size_t    minGallop = MIN_GALLOP;
-		Slice[40] stack     = void;
-		size_t    stackLen  = 0;
+		immutable minRun     = calcMinRun(range.length);
+		immutable minTemp    = range.length / 2 < MIN_STORAGE ? range.length / 2 : MIN_STORAGE;
+		size_t    minGallop  = MIN_GALLOP;
+		Slice[40] stack      = void;
+		size_t    stackLen   = 0;
+		size_t    runLen     = 0;
+		size_t    collapseAt = 0;
 		
 		// Allocate temporary memory if not provided by user
 		if(temp.length < minTemp)
@@ -89,10 +91,11 @@ template TimSortImpl(alias pred, R)
 			else temp = uninitializedArray!(T[])(minTemp);
 		}
 		
+		// Build and merge runs
 		for(size_t i = 0; i < range.length; )
 		{
 			// Find length of first run in list
-			size_t runLen = firstRun(range[i .. range.length]);
+			runLen = firstRun(range[i .. range.length]);
 			
 			// If run has less than minRun elements, extend using insertion sort
 			if(runLen < minRun)
@@ -113,22 +116,17 @@ template TimSortImpl(alias pred, R)
 				if(stackLen >= 3 && stack[stackLen - 3].length <= stack[stackLen - 2].length + stack[stackLen - 1].length)
 				{
 					if(stack[stackLen - 3].length <= stack[stackLen - 1].length)
-					{
-						mergeAt(range, stack[0 .. stackLen], stackLen - 3, minGallop, temp);
-						--stackLen;
-					}
+						collapseAt = stackLen - 3;
 					else
-					{
-						mergeAt(range, stack[0 .. stackLen], stackLen - 2, minGallop, temp);
-						--stackLen;
-					}
+						collapseAt = stackLen - 2;
 				}
 				else if(stack[stackLen - 2].length <= stack[stackLen - 1].length)
 				{
-					mergeAt(range, stack[0 .. stackLen], stackLen - 2, minGallop, temp);
-					--stackLen;
+					collapseAt = stackLen - 2;
 				}
 				else break;
+				
+				mergeAt(range, stack[0 .. stackLen--], collapseAt, minGallop, temp);
 			}
 		}
 		
@@ -136,20 +134,16 @@ template TimSortImpl(alias pred, R)
 		while(stackLen > 1)
 		{
 			if(stackLen >= 3 && stack[stackLen - 3].length <= stack[stackLen - 1].length)
-			{
-				mergeAt(range, stack[0 .. stackLen], stackLen - 3, minGallop, temp);
-				--stackLen;
-			}
+				collapseAt = stackLen - 3;
 			else
-			{
-				mergeAt(range, stack[0 .. stackLen], stackLen - 2, minGallop, temp);
-				--stackLen;
-			}
+				collapseAt = stackLen - 2;
+			
+			mergeAt(range, stack[0 .. stackLen--], collapseAt, minGallop, temp);
 		}
 	}
 	
 	/// Calculates optimal value for minRun
-	pure size_t minRunLength(size_t n)
+	pure size_t calcMinRun(size_t n)
 	{
 		size_t r = 0;
 		while(n >= MIN_MERGE)
@@ -222,75 +216,73 @@ template TimSortImpl(alias pred, R)
 	}
 	body
 	{
-		// Just some values ...
-		immutable base = stack[at].base;
-		immutable mid  = stack[at].length;
-		immutable len  = stack[at + 1].length + mid;
+		// Calculate bounds of runs from stack
+		size_t    firstElement = stack[at].base;
+		size_t    midElement   = stack[at].length + firstElement;
+		size_t    lastElement  = stack[at + 1].length + midElement;
+		immutable maxCapacity  = range.length / 2;
 		
 		// Pop run from stack
-		stack[at] = Slice(base, len);
+		stack[at] = Slice(firstElement, lastElement - firstElement);
 		if(at == stack.length - 3) stack[$ - 2] = stack[$ - 1];
 		
-		// Merge runs (at, at + 1)
-		return merge(range[base .. base + len], mid, minGallop, temp);
-	}
-	
-	/// Merge two runs in a range. Mid is the starting index of the second run.
-	/// minGallop and temp are references; The calling function must receive the updated values.
-	void merge(R range, size_t mid, ref size_t minGallop, ref T[] temp)
-	in
-	{
-		if(!__ctfe)
-		{
-			assert(isSorted!pred(range[0 .. mid]));
-			assert(isSorted!pred(range[mid .. range.length]));
-		}
-	}
-	body
-	{
-		assert(mid < range.length);
-		
-		// Reduce range of elements
-		immutable firstElement = gallopForwardUpper(range[0 .. mid], range[mid]);
-		immutable lastElement  = gallopReverseLower(range[mid .. range.length], range[mid - 1]) + mid;
+		// Slice range to bounds to be merged
 		range = range[firstElement .. lastElement];
-		mid -= firstElement;
+		midElement -= firstElement;
 		
-		// Important! Trust me!
-		if(mid == 0 || mid == range.length) return;
-		
-		// Call function which will copy smaller run into temporary memory
-		if(mid <= range.length / 2)
+		// Preliminary asserts and unittests
+		assert(midElement < range.length);
+		version(unittest) if(!__ctfe)
 		{
-			temp = ensureCapacity(range.length, mid, temp);
-			minGallop = mergeLo(range, mid, minGallop, temp);
+			assert(isSorted!pred(range[0 .. midElement]));
+			assert(isSorted!pred(range[midElement .. range.length]));
+		}
+		
+		// Take the last element in the first run and use a gallop search to find its position in the second run
+		// Likewise, take the first element in the second run and use a gallop search to find its position in the first run
+		// Outside of this range, the elements are already in place, so there is no need to merge them.
+		// Slice the range to exclude those elements.
+		firstElement = gallopForwardUpper(range[0 .. midElement], range[midElement]);
+		lastElement  = gallopReverseLower(range[midElement .. range.length], range[midElement - 1]) + midElement;
+		range = range[firstElement .. lastElement];
+		midElement -= firstElement;
+		
+		// If first or second range is empty, then exit as there is nothing to do.
+		if(midElement == 0 || midElement == range.length) return;
+		
+		// Call merge function which will copy the smaller run into temporary memory
+		if(midElement <= range.length / 2)
+		{
+			temp = ensureCapacity(midElement, maxCapacity, temp);
+			minGallop = mergeLo(range, midElement, minGallop, temp);
 		}
 		else
 		{
-			temp = ensureCapacity(range.length, range.length - mid, temp);
-			minGallop = mergeHi(range, mid, minGallop, temp);
+			temp = ensureCapacity(range.length - midElement, maxCapacity, temp);
+			minGallop = mergeHi(range, midElement, minGallop, temp);
 		}
 	}
 	
-	/// Enlarge size of temporary memory if needed
-	T[] ensureCapacity(size_t rangeLen, size_t minCapacity, T[] temp)
+	/// Enlarge size of temporary space if needed.
+	/// Temporary space is increased exponentially by powers of two.
+	T[] ensureCapacity(size_t minCapacity, size_t maxCapacity, T[] temp)
+	in
+	{
+		assert(minCapacity <= maxCapacity);
+	}
 	out(ret)
 	{
 		assert(ret.length >= minCapacity);
+		assert(ret.length <= maxCapacity);
 	}
 	body
 	{
 		if(temp.length < minCapacity)
 		{
-			size_t newSize = minCapacity;
-			foreach(n; TypeTuple!(1, 2, 4, 8, 16)) newSize |= newSize >> n;
-			++newSize;
-
-			if(newSize < minCapacity) newSize = minCapacity;
-			else newSize = min(newSize, rangeLen / 2);
-			
-			if(__ctfe) temp.length = newSize;
-			else temp = uninitializedArray!(T[])(newSize);
+			size_t newSize = MIN_STORAGE * 2;
+			while(newSize < minCapacity) newSize *= 2;
+			if(newSize > maxCapacity) newSize = maxCapacity;
+			if(temp.length < newSize) temp.length = newSize;
 		}
 		return temp;
 	}
@@ -476,7 +468,11 @@ template TimSortImpl(alias pred, R)
 		return minGallop > 0 ? minGallop : 1;
 	}
 	
-	/// false = forward / lower, true = reverse / upper
+	alias gallopSearch!(false, false) gallopForwardLower;
+	alias gallopSearch!(false, true)  gallopForwardUpper;
+	alias gallopSearch!(true, false)  gallopReverseLower;
+	alias gallopSearch!(true, true)   gallopReverseUpper;
+	
 	template gallopSearch(bool forwardReverse, bool lowerUpper)
 	{
 		/// Gallop search on range according to attributes forwardReverse and lowerUpper
@@ -551,11 +547,6 @@ template TimSortImpl(alias pred, R)
 		}
 	}
 	
-	alias gallopSearch!(false, false) gallopForwardLower;
-	alias gallopSearch!(false, true)  gallopForwardUpper;
-	alias gallopSearch!(true, false)  gallopReverseLower;
-	alias gallopSearch!(true, true)   gallopReverseUpper;
-	
 	//@ Workaround for DMD issue 7898
 	static if(__VERSION__ == 2059)
 	void copy(R1, R2)(R1 src, R2 dst)
@@ -572,59 +563,56 @@ template TimSortImpl(alias pred, R)
 
 unittest
 {
-	bool testSort(alias pred, R)(R range)
+	import std.random;
+	auto rnd = Random(unpredictableSeed);
+	
+	// Element type with two fields
+	static struct E
 	{
-		timSort!(pred, R)(range);
-		return isSorted!pred(range);
+		size_t value, index;
 	}
 	
-	int testCall(T)(in T[] arr)
+	E[] arr;
+	arr.length = 64 * 64;
+	
+	// We want duplicate values for testing stability
+	foreach(i, ref v; arr) v.value = i / 64;
+	
+	// Swap ranges at random middle point (test large merge operation)
+	immutable mid = uniform(arr.length / 4, arr.length / 4 * 3, rnd);
+	swapRanges(arr[0 .. mid], arr[mid .. $]);
+	
+	// Shuffle last 1/8 of the array (test insertion sort and linear merge)
+	randomShuffle(arr[$ / 8 * 7 .. $], rnd);
+	
+	// Swap few random elements (test galloping mode)
+	foreach(i; 0 .. arr.length / 64)
 	{
-		int failures = 0;
-		
-		// Sort
-		if(!testSort!"a < b"(arr.dup)) ++failures;
-		if(!testSort!"a > b"(arr.dup)) ++failures;
-		
-		return failures;
+		immutable a = uniform(0, arr.length, rnd), b = uniform(0, arr.length, rnd);
+		rnd.popFront();
+		swap(arr[a], arr[b]);
 	}
 	
-	// Array containing 256 random ints
-	enum test = [
-		10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70, 89, 94, 32, 46, 76, 43, 33, 62, 76, 
-		37, 93, 45, 48, 49, 21, 67, 56, 58, 17, 15, 41, 91, 94, 95, 41, 38, 80, 37, 24, 
-		26, 71, 87, 54, 72, 60, 29, 37, 41, 99, 31, 66, 75, 72, 86, 97, 37, 25, 98, 89, 
-		53, 45, 52, 76, 51, 38, 59, 53, 74, 96, 94, 42, 68, 84, 65, 27, 49, 57, 53, 74, 
-		39, 75, 39, 26, 46, 37, 68, 96, 19, 79, 73, 83, 36, 90, 11, 39, 48, 94, 97, 72, 
-		37, 43, 69, 36, 41, 47, 31, 48, 33, 21, 20, 18, 45, 28, 47, 54, 41, 28, 47, 44, 
-		51, 15, 21, 64, 82, 23, 41, 82, 30, 25, 78, 72, 50, 34, 45, 59, 14, 71, 50, 97, 
-		39, 87, 74, 60, 52, 17, 87, 45, 69, 54, 91, 68, 46, 99, 78, 33, 27, 53, 41, 84, 
-		82, 54, 29, 55, 53, 87, 13, 98, 55, 33, 73, 64, 19, 81, 57, 78, 23, 45, 94, 75, 
-		55, 43, 93, 85, 96, 82, 44, 73, 22, 79, 89, 20, 36, 11, 12, 51, 86, 86, 75, 66, 
-		81, 90, 80, 80, 36, 36, 47, 43, 86, 96, 45, 73, 70, 90, 57, 23, 86, 29, 12, 54, 
-		37, 17, 87, 12, 36, 78, 26, 28, 30, 15, 10, 53, 76, 34, 23, 49, 65, 17, 37, 51, 
-		26, 23, 66, 12, 26, 84, 60, 47, 30, 26, 78, 20, 42, 40, 63, 40
-	];
+	// Now that our test array is prepped, store original index value
+	// This will allow us to confirm the array was sorted stably
+	foreach(i, ref v; arr) v.index = i;
 	
-	// Runtime test
-	assert(testCall(test) == 0);
-	
-	// CTFE Test
-	//@ Disabled; Fails to compile under DMD
-	version(none)
+	// Now sort the array!
+	static bool comp(E a, E b)
 	{
-		enum result = testCall(test);
-		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: timSort CTFE unittest failed ", result, " of 2 tests");
+		return a.value < b.value;
 	}
 	
-	// Stability test
-	bool icmp(ubyte a, ubyte b)
+	timSort!comp(arr);
+	
+	// Test that the array was sorted correctly
+	assert(isSorted!comp(arr));
+	
+	// Test that the array was sorted stably
+	foreach(i; 0 .. arr.length - 1)
 	{
-		if(a >= 'a') a -= 'a' - 'A';
-		if(b >= 'a') b -= 'a' - 'A';
-		return a < b;
+		if(arr[i].value == arr[i + 1].value) assert(arr[i].index < arr[i + 1].index);
 	}
-	ubyte[] str = cast(ubyte[])"ksugnqtoyedwpvbmifaclrhjzxWELPGDVJIHBAMZCFUNORKSTYXQ".dup;
-	timSort!icmp(str);
-	assert(str == "aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+	
+	//@ Missing CTFE Test
 }
