@@ -56,9 +56,9 @@ template TimSortImpl(alias pred, R)
 	alias ElementType!R T;
 	
 	alias binaryFun!pred less;
-	bool greater(T a, T b){ return less(b, a); }
-	bool greaterEqual(T a, T b){ return !less(a, b); }
-	bool lessEqual(T a, T b){ return !less(b, a); }
+	bool greater      (T a, T b){ return  less(b, a); }
+	bool greaterEqual (T a, T b){ return !less(a, b); }
+	bool lessEqual    (T a, T b){ return !less(b, a); }
 
 	enum MIN_MERGE   = 64;
 	enum MIN_GALLOP  = 7;
@@ -70,7 +70,7 @@ template TimSortImpl(alias pred, R)
 	void sort(R range, T[] temp)
 	{
 		// Do insertion sort on small range
-		if(range.length <= 256)
+		if(range.length <= MIN_MERGE * 4)
 		{
 			binaryInsertionSort(range);
 			return;
@@ -232,14 +232,14 @@ template TimSortImpl(alias pred, R)
 		
 		// Preliminary asserts and unittests
 		assert(midElement < range.length);
-		version(unittest) if(!__ctfe)
+		if(!__ctfe)
 		{
 			assert(isSorted!pred(range[0 .. midElement]));
 			assert(isSorted!pred(range[midElement .. range.length]));
 		}
 		
-		// Take the last element in the first run and use a gallop search to find its position in the second run
-		// Likewise, take the first element in the second run and use a gallop search to find its position in the first run
+		// Take the last element in the first run and find its position in the second run
+		// Likewise, take the first element in the second run and find its position in the first run
 		// Outside of this range, the elements are already in place, so there is no need to merge them.
 		// Slice the range to exclude those elements.
 		firstElement = gallopForwardUpper(range[0 .. midElement], range[midElement]);
@@ -281,7 +281,9 @@ template TimSortImpl(alias pred, R)
 		{
 			size_t newSize = MIN_STORAGE * 2;
 			while(newSize < minCapacity) newSize *= 2;
-			if(newSize > maxCapacity) newSize = maxCapacity;
+			// If newSize exceeds half of maxCapacity, simply increase to maxCapacity
+			// This will prevent a minor reallocation such as 1024 -> 1040
+			if(newSize > maxCapacity / 2) newSize = maxCapacity;
 			if(temp.length < newSize) temp.length = newSize;
 		}
 		return temp;
@@ -564,7 +566,6 @@ template TimSortImpl(alias pred, R)
 unittest
 {
 	import std.random;
-	auto rnd = Random(unpredictableSeed);
 	
 	// Element type with two fields
 	static struct E
@@ -572,47 +573,66 @@ unittest
 		size_t value, index;
 	}
 	
-	E[] arr;
-	arr.length = 64 * 64;
-	
-	// We want duplicate values for testing stability
-	foreach(i, ref v; arr) v.value = i / 64;
-	
-	// Swap ranges at random middle point (test large merge operation)
-	immutable mid = uniform(arr.length / 4, arr.length / 4 * 3, rnd);
-	swapRanges(arr[0 .. mid], arr[mid .. $]);
-	
-	// Shuffle last 1/8 of the array (test insertion sort and linear merge)
-	randomShuffle(arr[$ / 8 * 7 .. $], rnd);
-	
-	// Swap few random elements (test galloping mode)
-	foreach(i; 0 .. arr.length / 64)
+	// Generates data especially for testing sorting with Timsort
+	static E[] genSampleData(uint seed)
 	{
-		immutable a = uniform(0, arr.length, rnd), b = uniform(0, arr.length, rnd);
-		rnd.popFront();
-		swap(arr[a], arr[b]);
+		auto rnd = Random(seed);
+		
+		E[] arr;
+		arr.length = 64 * 64;
+		
+		// We want duplicate values for testing stability
+		foreach(i, ref v; arr) v.value = i / 64;
+		
+		// Swap ranges at random middle point (test large merge operation)
+		immutable mid = uniform(arr.length / 4, arr.length / 4 * 3, rnd);
+		swapRanges(arr[0 .. mid], arr[mid .. $]);
+		
+		// Shuffle last 1/8 of the array (test insertion sort and linear merge)
+		randomShuffle(arr[$ / 8 * 7 .. $], rnd);
+		
+		// Swap few random elements (test galloping mode)
+		foreach(i; 0 .. arr.length / 64)
+		{
+			immutable a = uniform(0, arr.length, rnd), b = uniform(0, arr.length, rnd);
+			swap(arr[a], arr[b]);
+		}
+		
+		// Now that our test array is prepped, store original index value
+		// This will allow us to confirm the array was sorted stably
+		foreach(i, ref v; arr) v.index = i;
+		
+		return arr;
 	}
 	
-	// Now that our test array is prepped, store original index value
-	// This will allow us to confirm the array was sorted stably
-	foreach(i, ref v; arr) v.index = i;
-	
-	// Now sort the array!
-	static bool comp(E a, E b)
+	// Tests the Timsort function for correctness and stability
+	static bool testSort(uint seed)
 	{
-		return a.value < b.value;
+		auto arr = genSampleData(seed);
+	
+		// Now sort the array!
+		static bool comp(E a, E b)
+		{
+			return a.value < b.value;
+		}
+		
+		timSort!comp(arr);
+		
+		// Test that the array was sorted correctly
+		assert(isSorted!comp(arr));
+		
+		// Test that the array was sorted stably
+		foreach(i; 0 .. arr.length - 1)
+		{
+			if(arr[i].value == arr[i + 1].value) assert(arr[i].index < arr[i + 1].index);
+		}
+		
+		return true;
 	}
 	
-	timSort!comp(arr);
+	enum seed = 310614065;
+	testSort(seed);
 	
-	// Test that the array was sorted correctly
-	assert(isSorted!comp(arr));
-	
-	// Test that the array was sorted stably
-	foreach(i; 0 .. arr.length - 1)
-	{
-		if(arr[i].value == arr[i + 1].value) assert(arr[i].index < arr[i + 1].index);
-	}
-	
-	//@ Missing CTFE Test
+	//@@BUG: Timsort fails with CTFE as of DMD 2.060
+	// enum result = testSort(seed);
 }
