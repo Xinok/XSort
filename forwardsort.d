@@ -17,7 +17,8 @@ import std.range, std.algorithm, std.functional, std.array, std.parallelism;
 
 /++
 	Performs an unstable sort on a forward range according to predicate less.
-	The algorithm is a quick sort which resorts to comb sort to avoid worst case performance.
+	The algorithm is a quick sort with comb sort as a secondary algorithm.
+	A special partitioning algorithm is used to apply quick sort to forward ranges.
 	
 	Examples:
 	-----------------
@@ -161,7 +162,7 @@ template ForwardSortImpl(alias pred, R)
 		mid_out = mid;
 	}
 	
-	/// Performs a comb sort on a forward range; Used to avoid the worse-case of quick sort
+	/// Performs a comb sort on a forward range; Used to avoid the worst-case of quick sort
 	void forwardCombSort(R range, immutable size_t len)
 	{
 		size_t gap = len;
@@ -217,7 +218,7 @@ template ForwardSortImpl(alias pred, R)
 				if(less(o, arr[center])) upper = center;
 				else lower = center + 1;
 			}
-			for(upper = i; upper > lower; --upper) arr[upper] = arr[upper-1];
+			for(upper = i; upper > lower; --upper) arr[upper] = arr[upper - 1];
 			arr[upper] = o;
 		}
 		// End insertion sort

@@ -199,7 +199,7 @@ template MergeSortImpl(alias pred, bool half, R)
 				if(less(o, range[center])) upper = center;
 				else lower = center + 1;
 			}
-			for(upper = i; upper > lower; --upper) range[upper] = range[upper-1];
+			for(upper = i; upper > lower; --upper) range[upper] = range[upper - 1];
 			range[upper] = o;
 		}
 	}

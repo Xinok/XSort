@@ -8,10 +8,12 @@
 ++/
 
 module stablequicksort;
-import std.range, std.algorithm, std.functional, std.math, std.parallelism;
+import std.range, std.algorithm, std.functional, std.math;
 
 /++
-	Performs an stable quick sort on a random-access range according to predicate less.
+	Performs a stable quick sort on a random-access range according to predicate less.
+	The algorithm is a 3-way stable quick sort with O(log n log n) space complexity.
+	The pivot is chosen from a median of five.
 	
 	Returns: Sorted input as SortedRange
 	
@@ -23,7 +25,7 @@ import std.range, std.algorithm, std.functional, std.math, std.parallelism;
 	int[] array = [10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70];
 	stableQuickSort(array);
 	stableQuickSort!"a > b"(array); // Sorts array descending
-	stableQuickSort(array, true);   // Sorts array using multiple threads
+	stableQuickSort!("a < b", true)(array); // Sorts array in-place
 	-----------------
 ++/
 
@@ -56,8 +58,6 @@ template StableQuickSortImpl(alias pred, bool inPlace, R)
 	bool lessEqual(T a, T b){ return !less(b, a); }
 
 	enum MAX_INSERT = 32;        // Maximum length for an insertion sort
-	enum MIN_THREAD = 1024 * 64; // Minimum length of a sublist to initiate new thread
-	enum MAX_STACK  = 1024;      // Maximum number of bytes to allocate on stack
 	
 	/// Entry sort function
 	void sort(R range, T[] temp)

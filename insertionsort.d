@@ -34,15 +34,15 @@ import std.range, std.algorithm, std.functional, std.array;
 	alias binaryFun!less lessFun;
 	
 	T o; size_t j;
-	for(size_t i = 1; i < range.length; ++i) if(lessFun(range[i], range[i-1]))
+	for(size_t i = 1; i < range.length; ++i) if(lessFun(range[i], range[i - 1]))
 	{
 		j = i; o = range[j];
 		do
 		{
-			range[j] = range[j-1];
+			range[j] = range[j - 1];
 			--j;
 		}
-		while(j >= 1 && lessFun(o, range[j-1]));
+		while(j >= 1 && lessFun(o, range[j - 1]));
 		range[j] = o;
 	}
 	
@@ -126,7 +126,7 @@ import std.range, std.algorithm, std.functional, std.array;
 		}
 		
 		// Insertion
-		for(upper = i; upper > lower; --upper) range[upper] = range[upper-1];
+		for(upper = i; upper > lower; --upper) range[upper] = range[upper - 1];
 		range[upper] = o;
 	}
 	

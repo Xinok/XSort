@@ -17,7 +17,7 @@ import std.range, std.algorithm, std.functional, std.math, std.array, std.c.stdl
 
 /++
 	Performs a stable sort on a random-access range according to predicate less.
-	The algorithm is a natural merge sort using O(log n log n) additional space.
+	The algorithm is a natural merge sort with O(log n log n) space complexity.
 	
 	Returns: Sorted input as SortedRange
 	
@@ -344,7 +344,7 @@ template StableSortImpl(alias pred, bool inPlace = false, R)
 			else lower = center + 1;
 		}
 		
-		swapBlocks(lef[lower .. lef.length], rig[0 .. off-lower + 1]);
+		swapBlocks(lef[lower .. lef.length], rig[0 .. off - lower + 1]);
 		
 		return lower;
 	}
@@ -378,7 +378,7 @@ template StableSortImpl(alias pred, bool inPlace = false, R)
 				if(less(o, range[center])) upper = center;
 				else lower = center + 1;
 			}
-			for(upper = i; upper > lower; --upper) range[upper] = range[upper-1];
+			for(upper = i; upper > lower; --upper) range[upper] = range[upper - 1];
 			range[upper] = o;
 		}
 	}

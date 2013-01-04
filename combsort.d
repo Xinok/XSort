@@ -87,7 +87,7 @@ import std.range, std.algorithm, std.functional, std.math;
 			range[j] = range[j-1];
 			--j;
 		}
-		while(j >= 1 && lessFun(o, range[j-1]));
+		while(j >= 1 && lessFun(o, range[j - 1]));
 		range[j] = o;
 	}
 	
@@ -153,7 +153,7 @@ import std.range, std.algorithm, std.functional, std.math;
 		}
 		
 		// Insertion
-		for(upper = i; upper > lower; --upper) range[upper] = range[upper-1];
+		for(upper = i; upper > lower; --upper) range[upper] = range[upper - 1];
 		range[upper] = o;
 	}
 	

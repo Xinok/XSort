@@ -10,7 +10,7 @@
 ++/
 
 module timsort;
-import std.range, std.algorithm, std.functional, std.array, std.typetuple;
+import std.range, std.algorithm, std.functional, std.array;
 
 /++
 	Performs a tim sort on a random-access range according to predicate less.
