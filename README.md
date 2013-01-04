@@ -1,6 +1,6 @@
-A collection of sorting algorithms for the D programming language. Some were implemented with a specific purpose in mind *(stable / unstable / forward sorting)*, while others are generic implementations provided for general use or reference. All modules contain documentation, unittests, and can be used independently of one another.
+A collection of sorting algorithms for the [D programming language](http://dlang.org/). Some were implemented with a specific purpose in mind *(stable / unstable / forward sorting)*, while others are generic implementations provided for general use or reference. All modules contain documentation, unittests, and can be used independently of one another.
 
-Phobos is the standard library for the [D programming language](http://dlang.org/). The stable sort in Phobos is slow, broken, and not even stable ([bug 4584](http://d.puremagic.com/issues/show_bug.cgi?id=4584)). The unstable sort works great overall but has a few bad cases where it performs poorly ([bug 7767](http://d.puremagic.com/issues/show_bug.cgi?id=7767)). I provide two of these modules as substitutes (and possible replacements) for the sort function in Phobos.
+The Timsort module has been incorporated as the stable sorting algorithm for Phobos, the standard library for the D programming language. The Phobos implementation is revised and should be considered independent of the module located in this repository.
 
 ----------
 
@@ -88,6 +88,7 @@ Forward ranges don't allow for random access, so efficiently sorting in-place is
 **Features**
 
 * Concurrently sort range in multiple threads
+* Works on non-Lvalue Ranges (including SList and DList)
 
 **Attributes**
 
@@ -128,7 +129,9 @@ Tim sort is a natural merge sort variant. It's a complex algorithm, so if you wi
 
 **Implementation**
 
-I wrote a proper implementation from scratch for D. I used [TimSort.java](http://cr.openjdk.java.net/~martin/webrevs/openjdk7/timsort/raw_files/new/src/share/classes/java/util/TimSort.java) for Android as a reference. Major differences include the use of static functions, slicing, and the way in which many components were implemented. Only some small parts were copied as is (constants, minRunLength, ensureCapacity).
+I wrote a proper implementation from scratch for D. I used [TimSort.java](http://cr.openjdk.java.net/~martin/webrevs/openjdk7/timsort/raw_files/new/src/share/classes/java/util/TimSort.java) for Android as a reference. Major differences include the use of static functions, slicing, and the way in which many components were implemented.
+
+This module was revised and incorporated as the stable sorting algorithm in Phobos, the standard library of the D programming language. I will continue to maintain this implementation independently of Phobos.
 
 ----------
 
