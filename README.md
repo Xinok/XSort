@@ -133,6 +133,36 @@ I wrote a proper implementation from scratch for D. I used [TimSort.java](http:/
 
 This module was revised and incorporated as the stable sorting algorithm in Phobos, the standard library of the D programming language. I will continue to maintain this implementation independently of Phobos.
 
+
+----------
+
+# timsortlow.d #
+A tim sort with lower space complexity
+
+**Features**
+
+* Provide your own temporary memory (useful to avoid multiple allocations)
+
+**Attributes**
+
+* Stable, Natural
+* O(n) best case
+* O(n log n) average case
+* O(n log n) worst case
+* O(n / 1024) constant auxiliary space complexity
+
+**Implementation**
+
+This is a variant of Tim Sort with a lower constant space complexity of O(n / 1024). I use the term "constant" to emphasize the fact that there are no reallocations. This module was written as an experiment to see if there was any benefit. Albeit there are no reallocations, the additional processing necessary to make it work results in worse performance. Despite that, I decided to make this module public as a reference for those interetested or in the off-chance that this module may actually serve a useful purpose.
+
+*The lower space complexity* is achieved by using rotations to reduce two large runs into smaller several runs which can fit into the small amount of additional space allocated on the heap (or possibly elsewhere if the user provides their own temporary memory). This process requires a signficiant increase in reads and writes (due to swapping), but only a small increase in the number of comparisons (due to a binary search on the two runs prior to each rotation).
+
+*Merging and building runs* remains unchanged since this is already done in-place
+
+*Galloping mode* remains unchanged, although some of its benefits are lost. Galloping mode is most beneficial on large runs, but because of the lower space complexity, one of the runs being merged small enough to fit into the additional space. If one run happens to be significantly larger than the other, then some of the benefit of galloping mode may be retained.
+
+*A step in the original merging procedure* has been removed. Originally, Timsort takes the back element in the first run and uses a galloping search to find its location in the second run, and vice versa. The benefit here is that this step may reduce the range of elements to be merged, possibly avoiding the need for a reallocation. However, since this variant has constant space complexity, reallocations never occur and this step is unnecessary. Furthermore, while this step could reduce the number of comparisons, galloping mode substitutes well and retains that benefit.
+
 ----------
 
 # insertionsort.d #

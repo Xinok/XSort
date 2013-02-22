@@ -7,9 +7,12 @@
 ++/
 
 module benchsort;
-import std.stdio, std.random, std.datetime, std.string, std.range, std.algorithm, std.container, std.digest.crc;
+import std.stdio, std.random, std.datetime, std.string, std.range, std.algorithm, std.container;
 import core.memory;
-import combsort, forwardsort, heapsort, insertionsort, mergesort, shellsort, stablequicksort, stablesort, timsort, unstablesort;
+import combsort, forwardsort, heapsort, insertionsort, mergesort, shellsort, stablequicksort, stablesort, timsort, timsortlow, unstablesort;
+
+static if(__VERSION__ >= 2061) import std.digest.crc;
+else import std.md5;
 
 void main()
 {
@@ -64,7 +67,8 @@ void main()
 		name = (name ~ blank)[0..40];
 		string time = ((bench > 0 ? format("%dms", bench) : "???") ~ blank)[0..10];
 		string comps = ((count > 0 ? format("%d", count) : "???") ~ blank)[0..12];
-		string hash = toHexString(digest!CRC32(copy));
+		static if(__VERSION__ >= 2061) string hash = toHexString(digest!CRC32(copy));
+		else string hash = getDigestString(copy)[0..8];
 		
 		writeln(name, time, comps, hash);
 	}
@@ -123,6 +127,7 @@ void main()
 	profileSort("Stable Sort In-Place (Concurrent)", bench(stableSort!("a < b", true)(copy, true)), 0);
 	
 	profileSort("Tim Sort", bench(timSort(copy)), count(timSort!pred(copy)));
+	profileSort("Tim Sort Low", bench(timSortLow(copy)), count(timSortLow!pred(copy)));
 	
 	profileSort("Unstable Sort", bench(unstableSort(copy, false)), count(unstableSort!pred(copy, false)));
 	profileSort("Unstable Sort (Concurrent)", bench(unstableSort(copy, true)), comps);
