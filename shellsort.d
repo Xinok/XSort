@@ -8,12 +8,15 @@
 ++/
 
 module shellsort;
-import std.range, std.algorithm, std.functional;
+import std.range, std.algorithm, std.functional, std.parallelism;
 
 /++
 	Performs a shell sort on a random-access range according to predicate less.
 	
 	Returns: Sorted input as SortedRange
+ 	
+ 	Params:
+ 	threaded = Set to true for concurrent sorting
 	
 	Examples:
 	-----------------
@@ -23,25 +26,76 @@ import std.range, std.algorithm, std.functional;
 	-----------------
 ++/
 
-@trusted SortedRange!(R, less) shellSort(alias less = "a < b", R)(R range)
+@trusted SortedRange!(R, less) shellSort(alias less = "a < b", R)(R range, immutable bool threaded = false)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
 	static assert(hasAssignableElements!R);
-	alias ElementType!R T;
-	alias binaryFun!less lessFun;
 	
-	// Gap sequence applicable up to uint.max length
+	if(threaded) ShellSortImpl!(less, R).sort(range, defaultPoolThreads + 1);
+	else ShellSortImpl!(less, R).sort(range);
+	
+	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
+	return assumeSorted!(less, R)(range.save);
+}
+
+template ShellSortImpl(alias pred = "a < b", R)
+{
+	static assert(isRandomAccessRange!R);
+	static assert(hasLength!R);
+	static assert(hasAssignableElements!R);
+	
+	alias ElementType!R T;
+	alias binaryFun!pred less;
+	
 	static immutable gaps = [
 		1147718699, 510097199, 226709865, 100759939, 44782195, 19903197, 
 		8845865, 3931495, 1747330, 776590, 345151, 153400, 68177, 30300, 
 		13466, 5984, 2659, 1750, 701, 301, 132, 57, 23, 10, 4, 1];
 	
-	T o; size_t i;
-	
-	foreach(gap; gaps) if(gap < range.length)
+	void sort(R range)
 	{
-		foreach(start; gap .. range.length) if(lessFun(range[start], range[start - gap]))
+		foreach(gap; gaps) if(gap < range.length / 2) pass(range, gap);
+	}
+	
+	void sort(R range, size_t threadCount)
+	{
+		foreach(gap; gaps) if(gap < range.length / 2)
+		{
+			immutable count = min(threadCount, gap);
+			
+			if(count == 1)
+			{
+				pass(range, gap);
+				continue;
+			}
+			
+			sort(range, count, gap, gap, gap * 2);
+		}
+	}
+	
+	void sort(R range, immutable size_t threadCount, immutable size_t gap, immutable size_t start, immutable size_t end)
+	{
+		if(threadCount < 2)
+		{
+			pass(range, gap, start, end);
+			return;
+		}
+		
+		immutable mid = (end - start) / threadCount * (threadCount / 2) + start;
+		
+		auto th = task!sort(range, threadCount / 2, gap, start, mid);
+		taskPool.put(th);
+		sort(range, threadCount - (threadCount / 2), gap, mid, end);
+		th.workForce();
+	}
+	
+	void pass(R range, immutable size_t gap)
+	{
+		size_t i;
+		T o;
+		
+		foreach(start; gap .. range.length) if(less(range[start], range[start - gap]))
 		{
 			i = start;
 			o = range[i];
@@ -50,13 +104,31 @@ import std.range, std.algorithm, std.functional;
 				range[i] = range[i - gap];
 				i -= gap;
 			}
-			while(i >= gap && lessFun(o, range[i - gap]));
+			while(i >= gap && less(o, range[i - gap]));
 			range[i] = o;
 		}
 	}
 	
-	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
-	return assumeSorted!(less, R)(range.save);
+	void pass(R range, immutable size_t gap, size_t start, immutable size_t end)
+	{
+		size_t c, i;
+		T o;
+		
+		for(; start < end; ++start)
+			for(c = start; c < range.length; c += gap)
+				if(less(range[c], range[c - gap]))
+		{
+			i = c;
+			o = range[i];
+			do
+			{
+				range[i] = range[i - gap];
+				i -= gap;
+			}
+			while(i >= gap && less(o, range[i - gap]));
+			range[i] = o;
+		}
+	}
 }
 
 // No longer used; Provided merely for reference

@@ -117,6 +117,7 @@ void main()
 	profileSort("Merge Sort O(n/2) (Concurrent)", bench(mergeSort!("a < b", true)(copy, true)), comps);
 	
 	profileSort("Shell Sort", bench(shellSort(copy)), count(shellSort!pred(copy)));
+	profileSort("Shell Sort (Concurrent)", bench(shellSort(copy, true)), comps);
 	
 	profileSort("Stable Quick Sort", bench(stableQuickSort!("a < b", false)(copy)), count(stableQuickSort!(pred, false)(copy)));
 	profileSort("Stable Quick Sort In-Place", bench(stableQuickSort!("a < b", true)(copy)), count(stableQuickSort!(pred, true)(copy)));

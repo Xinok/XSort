@@ -234,7 +234,7 @@ I've always favored shell sort for it's acceptable worst case performance, O(1) 
 
 **Features**
 
-* None to speak of
+* Concurrently sort range in multiple threads
 
 **Attributes**
 
@@ -245,6 +245,8 @@ I've always favored shell sort for it's acceptable worst case performance, O(1) 
 **Implementation**
 
 A standard shell sort implementation. The lower part of the gap sequence is the best known, [1750, 701, 301, 132, 57, 23, 10, 4, 1]. Larger gaps were calculated using the formula, `(9 ^ k - 4 ^ k) / (5 * 4 ^ (k - 1))`.
+
+Concurrent shell sort is possible thanks to the gap sequence. You can split up the list into sets of elements that are distributed at fixed intervals, in which each set can be sorted independently of one another. These sets are distributed evenly among a fixed number of threads for sorting.
 
 ----------
 
