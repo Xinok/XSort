@@ -1,0 +1,5 @@
+@build.args
+-release
+-O
+-inline
+-quiet

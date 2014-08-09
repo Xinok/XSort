@@ -1,0 +1,4 @@
+@build.args
+-debug
+-unittest
+-quiet
