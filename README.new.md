@@ -28,9 +28,7 @@ All modules are provided with documentation and unittests. Any single module may
 Here are a few other sorting algorithms implemented by others for the D programming language:
 
 - [Radix Sort](https://github.com/nordlow/justd/blob/master/intsort.d#L92intsort.d) by Per Nordlöw - Supports integral and floating-point element types
-
 - [Smooth Sort](https://github.com/deadalnix/Dsort/blob/master/sort/smooth.d) by deadalnix - A natural variant of heap sort using Leonardo heaps
-
 - [Tree Sort](http://dlang.org/phobos/std_container_rbtree.html) - An implementation of a red-black tree is available in the Phobos standard library
 
 ## Compiling ##

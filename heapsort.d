@@ -1,8 +1,6 @@
 /++
 	Heap Sort for Random-Access Ranges
 	
-	Written and tested for DMD 2.059 and Phobos
-	
 	Authors:  Xinok
 	License:  Public Domain
 ++/

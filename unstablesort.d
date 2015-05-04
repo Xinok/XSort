@@ -1,8 +1,6 @@
 /++
 	Unstable Sort for Random-Access Ranges
 	
-	Written and tested for DMD 2.058 and Phobos
-	
 	Authors:  Xinok
 	License:  Public Domain
 ++/
@@ -177,7 +175,7 @@ template UnstableSortImpl(alias pred, R)
 	}
 	
 	/// Finds the median of five in six comparisons while satisfiying the condition: 
-	/// (a < c && b < c && c < d && d < e)
+	/// (a < c && b < c && c < d && c < e)
 	void medianSort(ref T a, ref T b, ref T c, ref T d, ref T e)
 	out
 	{

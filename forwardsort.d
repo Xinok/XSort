@@ -1,15 +1,8 @@
 /++
 	Unstable Sort for Forward Ranges
-	
-	Written and tested for DMD 2.058 and Phobos
-	
+		
 	Authors:  Xinok
 	License:  Public Domain
-	
-	Bugs:
-	Worst case performance of O(n^2)
-	
-	CTFE results in out-of-memory error
 ++/
 
 module forwardsort;
@@ -36,6 +29,7 @@ void forwardSort(alias less = "a < b", R)(R range, bool threaded = false)
 	static assert(hasAssignableElements!R);
 	
 	ForwardSortImpl!(less, R).sort(range, threaded);
+    
 	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
 }
 
@@ -252,17 +246,17 @@ unittest
 		forwardSort!(pred, R)(range);
 		return isSorted!pred(range);
 	}
-	
+
 	int testCall(T)(in T[] arr)
 	{
 		int failures = 0;
-		
+
 		if(!testSort!"a < b"(arr.dup)) ++failures;
 		if(!testSort!"a > b"(arr.dup)) ++failures;
-		
+
 		return failures;
 	}
-	
+
 	// Array containing 256 random ints
 	enum test = [
 		10, 37, 74, 99, 86, 28, 17, 39, 18, 38, 70, 89, 94, 32, 46, 76, 43, 33, 62, 76, 
@@ -279,13 +273,12 @@ unittest
 		37, 17, 87, 12, 36, 78, 26, 28, 30, 15, 10, 53, 76, 34, 23, 49, 65, 17, 37, 51, 
 		26, 23, 66, 12, 26, 84, 60, 47, 30, 26, 78, 20, 42, 40, 63, 40
 	];
-	
+
 	// Runtime test
 	assert(testCall(test) == 0);
-	
+
 	// CTFE Test
-	//@ Disabled as it results in an out-of-memory error
-	version(none)
+	version(all)
 	{
 		enum result = testCall(test);
 		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: forwardSort CTFE unittest failed ", result, " of 2 tests");

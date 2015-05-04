@@ -1,8 +1,6 @@
 /++
 	Shell Sort for Random-Access Ranges
-	
-	Written and tested for DMD 2.058 and Phobos
-	
+		
 	Authors:  Xinok
 	License:  Public Domain
 ++/

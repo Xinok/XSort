@@ -1,12 +1,8 @@
 /++
 	Tim Sort for Random-Access Ranges
 	
-	Written and tested for DMD 2.060 and Phobos
-	
 	Authors:  Xinok
 	License:  Public Domain
-	
-	Bugs: CTFE fails under DMD
 ++/
 
 module timsort;

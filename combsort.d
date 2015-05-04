@@ -1,13 +1,11 @@
 /++
 	Comb Sort for Random-Access Ranges
-	
-	Written and tested for DMD 2.058 and Phobos
-	
+		
+    Authors: Xinok
+	License: Public Domain
+    
 	Bugs:
 	CTFE results in out of memory error
-	
-	Authors:  Xinok
-	License:  Public Domain
 ++/
 
 module combsort;

@@ -1,14 +1,10 @@
 /++
 	Stable Sort for Random-Access Ranges
-	
-	Written and tested for DMD 2.059 and Phobos
-	
+		
 	Authors:  Xinok
 	License:  Public Domain
 	
 	Bugs:
-	CTFE fails under DMD
-	
 	Parallel sort fails to compile in debug builds
 ++/
 

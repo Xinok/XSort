@@ -3,8 +3,6 @@
 
 	Authors:  Xinok
 	License:  Public Domain
-	
-	Bugs: CTFE fails under DMD
 ++/
 
 module timsortlow;
