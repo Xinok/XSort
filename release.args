@@ -3,3 +3,4 @@
 -O
 -inline
 -quiet
+-boundscheck=off
