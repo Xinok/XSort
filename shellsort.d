@@ -55,12 +55,12 @@ template ShellSortImpl(alias pred = "a < b", R)
 	
 	void sort(R range)
 	{
-		foreach(gap; gaps) if(gap < range.length / 2) pass(range, gap);
+		foreach(gap; gaps) if(gap <= range.length / 2) pass(range, gap);
 	}
 	
 	void sort(R range, size_t threadCount)
 	{
-		foreach(gap; gaps) if(gap < range.length / 2)
+		foreach(gap; gaps) if(gap <= range.length / 2)
 		{
 			immutable count = min(threadCount, gap);
 			
