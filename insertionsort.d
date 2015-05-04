@@ -1,12 +1,7 @@
 /++
 	Insertion Sort for Random-Access Ranges
 	
-	Written and tested for DMD 2.058 and Phobos
-	
-	Bugs:
-	Worst case performance is O(n^2)
-	
-	Authors:  Xinok
+    Authors:  Xinok
 	License:  Public Domain
 ++/
 
@@ -127,6 +122,62 @@ import std.range, std.algorithm, std.functional, std.array;
 		
 		// Insertion
 		for(upper = i; upper > lower; --upper) range[upper] = range[upper - 1];
+		range[upper] = o;
+	}
+	
+	if(!__ctfe) assert(isSorted!(less)(range.save), "Range is not sorted");
+	return assumeSorted!(less, R)(range.save);
+}
+
+/+
+    An alternate implementation of binary insertion sort utilizing
+    Duff's Device for insertion
++/
+@trusted SortedRange!(R, less) duffInsertionSort(alias less = "a < b", R)(R range)
+{
+	static assert(isRandomAccessRange!R);
+	static assert(hasLength!R);
+	static assert(hasAssignableElements!R);
+	alias ElementType!R T;
+	alias binaryFun!less lessFun;
+	
+	size_t lower, center, upper;
+	T o;
+	foreach(i; 1 .. range.length)
+	{
+		o = range[i];
+		lower = 0;
+		upper = i;
+		
+		// Binary search
+		while(upper != lower)
+		{
+			center = (lower + upper) / 2;
+			if(lessFun(o, range[center])) upper = center;
+			else lower = center + 1;
+		}
+		
+		upper = i;
+		// Insertion using simple loop for CTFE
+		if(__ctfe) for(; upper > lower; --upper) range[upper] = range[upper - 1];
+		else if(upper > lower)
+		{
+			// Insertion using Duff's Device
+			switch((upper - lower) % 8)
+			{
+				default: assert(0);
+				case 0: range[upper] = range[upper - 1]; --upper; goto case;
+				case 7: range[upper] = range[upper - 1]; --upper; goto case;
+				case 6: range[upper] = range[upper - 1]; --upper; goto case;
+				case 5: range[upper] = range[upper - 1]; --upper; goto case;
+				case 4: range[upper] = range[upper - 1]; --upper; goto case;
+				case 3: range[upper] = range[upper - 1]; --upper; goto case;
+				case 2: range[upper] = range[upper - 1]; --upper; goto case;
+				case 1: range[upper] = range[upper - 1]; --upper;
+				if(upper > lower) goto case 0;
+			}
+		}
+		
 		range[upper] = o;
 	}
 	
