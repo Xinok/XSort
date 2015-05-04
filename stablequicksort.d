@@ -1,8 +1,6 @@
 /++
 	Stable Quick Sort for Random-Access Ranges
 	
-	Written and tested for DMD 2.059 and Phobos
-	
 	Authors:  Xinok
 	License:  Public Domain
 ++/
@@ -243,7 +241,7 @@ template StableQuickSortImpl(alias pred, bool inPlace, R)
 		{
 			T o;
 			
-			while(p3 - p1 < MAX_INSERT)
+			while(p3 - p1 < MAX_INSERT*3/4)
 			{
 				if(less(range[p3], pivot))
 				{
@@ -283,71 +281,37 @@ template StableQuickSortImpl(alias pred, bool inPlace, R)
 			}
 		}
 		
-		// Rotate elements
+		// Merge elements
 		while(p3 < minLength)
 		{
 			auto parts = partition3(range[p3 .. range.length], temp, pivot, p3);
 			size_t p4 = parts[0] + p3, p5 = parts[1] + p3, p6 = parts[2] + p3;
 			
-			rotate(range[p2 .. p4], p3 - p2, temp);
-			p3 = p4 - (p3 - p2);
-			rotate(range[p1 .. p3], p2 - p1, temp);
-			rotate(range[p3 .. p5], p4 - p3, temp);
-			p2 = p3 - (p2 - p1);
-			p4 = p5 - (p4 - p3);
-			
-			p1 = p2;
-			p2 = p4;
-			p3 = p6;
+            /+
+                These statements use a sequence of reversals
+                to rotate the elements into place
+            +/
+            reverse(range, p2, p4);
+            p3 = p4 - p3 + p2;
+            reverse(range, p1, p3);
+            reverse(range, p3, p5);
+            p2 = p3 - p2 + p1;
+            p4 = p5 - p4 + p3;
+            reverse(range, p2, p3);
+            reverse(range, p3, p4);
+            p1 = p2;
+            p2 = p4;
+            p3 = p6;
 		}
 		
 		return [p1, p2, p3];
 	}
-	
-	/// Rotate elements on 'mid' axis
-	void rotate(R range, size_t mid, T[] temp)
-	in
-	{
-		assert(mid <= range.length);
-	}
-	body
-	{
-		T o;
-		while(true)
-		{
-			immutable nu = range.length - mid;
-			
-			if(mid <= range.length / 2)
-			{
-				if(mid == 0) return;
-				else static if(!inPlace) if(mid <= temp.length)
-				{
-					foreach(i; 0 .. mid) temp[i] = range[i];
-					foreach(i; 0 .. nu) range[i] = range[i + mid];
-					foreach(i; 0 .. mid) range[nu + i] = temp[i];
-					return;
-				}
-				
-				foreach(i; 0 .. mid) swap(range[i], range[i + mid]);
-				range = range[mid .. range.length];
-			}
-			else
-			{
-				if(mid == range.length) return;
-				else static if(!inPlace) if(range.length - mid <= temp.length)
-				{
-					foreach(i; mid .. range.length) temp[i - mid] = range[i];
-					foreach_reverse(i; nu .. range.length) range[i] = range[i - nu];
-					foreach(i; 0 .. nu) range[i] = temp[i];
-					return;
-				}
-				
-				foreach(i; mid - nu .. mid) swap(range[i], range[i + nu]);
-				range = range[0 .. mid];
-				mid = mid - nu;
-			}
-		}
-	}
+    
+    // Reverse the order of elements in range[a..b]
+    void reverse(R range, size_t a, size_t b)
+    {
+        while(a < b) swap(range[a++], range[--b]);
+    }
 	
 	/// Binary insertion sort is used for sorting small sublists
 	void binaryInsertionSort(R range)
@@ -415,6 +379,7 @@ unittest
 	assert(testCall(test) == 0);
 	
 	// CTFE Test
+    version(all)
 	{
 		enum result = testCall(test);
 		static if(result != 0) pragma(msg, __FILE__, "(", __LINE__, "): Warning: stableQuickSort CTFE unittest failed ", result, " of 4 tests");
