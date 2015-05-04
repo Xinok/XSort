@@ -79,7 +79,7 @@ template TimSortLowImpl(alias pred, R)
 		Slice[40] stack      = void;
 		size_t    stackLen   = 0;
 		size_t    runLen     = 0;
-		size_t    collapseAt = 0;
+        size_t    collapseAt = 0;
 		
 		// Allocate temporary memory if not provided by user
 		if(temp.length == 0)
@@ -103,24 +103,41 @@ template TimSortLowImpl(alias pred, R)
 			stack[stackLen++] = Slice(i, runLen);
 			i += runLen;
 			
-			// Collapse stack so that (e1 >= e2 + e3 && e2 >= e3)
-			while(stackLen > 1)
-			{
-				if(stackLen >= 3 && stack[stackLen - 3].length <= stack[stackLen - 2].length + stack[stackLen - 1].length)
-				{
-					if(stack[stackLen - 3].length <= stack[stackLen - 1].length)
-						collapseAt = stackLen - 3;
-					else
-						collapseAt = stackLen - 2;
-				}
-				else if(stack[stackLen - 2].length <= stack[stackLen - 1].length)
-				{
-					collapseAt = stackLen - 2;
-				}
-				else break;
-				
-				mergeAt(range, stack[0 .. stackLen--], collapseAt, minGallop, temp);
-			}
+			/+
+                Collapse stack until the variant is established:
+                r1 > r2 + r3 && r2 > r3
+                where r1, r2, r3 are the lengths of adjacent runs on the stack
+                
+                Credit given for fix and code adapted from this article:
+                http://envisage-project.eu/proving-android-java-and-python-sorting-algorithm-is-broken-and-how-to-fix-it/
+            +/
+            while(stackLen > 1)
+            {
+                immutable r1 = stackLen - 4, r2 = r1 + 1, r3 = r2 + 1, r4 = r3 + 1;
+                
+                if( stackLen > 2 && stack[r2].length <= stack[r3].length + stack[r4].length || 
+                    stackLen > 3 && stack[r1].length <= stack[r3].length + stack[r2].length )
+                {
+                    if(stack[r2].length < stack[r4].length) collapseAt = r2;
+                    else collapseAt = r3;
+                }
+                else if(stack[r3].length > stack[r4].length) break;
+                else collapseAt = r3;
+                
+                mergeAt(range, stack[0 .. stackLen], collapseAt, minGallop, temp);
+                stackLen -= 1;
+            }
+            
+            // Assert that the code above established the invariant correctly
+            version(unittest)
+            {
+                if(stackLen == 2) assert(stack[0].length > stack[1].length);
+                else if(stackLen > 2) foreach(k; 2 .. stackLen)
+                {
+                    assert(stack[k - 2].length > stack[k - 1].length + stack[k].length);
+                    assert(stack[k - 1].length > stack[k].length);
+                }
+            }
 		}
 		
 		// Force collapse stack until there is only one run left
@@ -203,7 +220,7 @@ template TimSortLowImpl(alias pred, R)
 	in
 	{
 		assert(stack.length >= 2);
-		assert(at == stack.length - 2 || at == stack.length - 3);
+		assert(stack.length - at == 2 || stack.length - at == 3);
 	}
 	body
 	{
@@ -214,7 +231,7 @@ template TimSortLowImpl(alias pred, R)
 		
 		// Pop run from stack
 		stack[at] = Slice(base, len);
-		if(at == stack.length - 3) stack[$ - 2] = stack[$ - 1];
+		if(stack.length - at == 3) stack[$ - 2] = stack[$ - 1];
 		
 		// Merge runs (at, at + 1)
 		return merge(range[base .. base + len], mid, minGallop, temp);
@@ -632,6 +649,15 @@ unittest
 	enum seed = 310614065;
 	testSort(seed);
 	
-	//@@BUG: Timsort fails with CTFE as of DMD 2.060
-	// enum result = testSort(seed);
+	enum result = testSort(seed);
+}
+
+unittest
+{
+    // Test case for the following issue:
+    // http://envisage-project.eu/proving-android-java-and-python-sorting-algorithm-is-broken-and-how-to-fix-it/
+    
+    import std.array, std.range;
+    auto arr = chain(iota(0, 384), iota(0, 256), iota(0, 80), iota(0, 64), iota(0, 96)).array;
+    timSortLow(arr);
 }
