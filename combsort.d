@@ -54,7 +54,7 @@ import std.range, std.algorithm, std.functional, std.math;
 }
 
 /// Performs a comb sort ending with an insertion sort using linear search
-@trusted SortedRange!(R, less) combSortLinear(alias less = "a < b", R)(R range, immutable real shrinkFactor = 1.375)
+@trusted SortedRange!(R, less) combSortLinear(alias less = "a < b", R)(R range, immutable real shrinkFactor = 1.35, immutable size_t threshold = 16)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
@@ -65,7 +65,7 @@ import std.range, std.algorithm, std.functional, std.math;
 	size_t gap = range.length;
 	
 	// Comb sort
-	while(true)
+	while(gap > threshold)
 	{
 		gap /= shrinkFactor;
 		
@@ -73,8 +73,6 @@ import std.range, std.algorithm, std.functional, std.math;
 		{
 			swap(range[i], range[i - gap]);
 		}
-		
-		if(gap <= 6) break;
 	}
 	
 	// Insertion sort
@@ -96,7 +94,7 @@ import std.range, std.algorithm, std.functional, std.math;
 }
 
 /// Performs a comb sort ending with an insertion sort using gallop search
-@trusted SortedRange!(R, less) combSortGallop(alias less = "a < b", R)(R range, immutable real shrinkFactor = 1.42)
+@trusted SortedRange!(R, less) combSortGallop(alias less = "a < b", R)(R range, immutable real shrinkFactor = 1.375, immutable size_t threshold = 32)
 {
 	static assert(isRandomAccessRange!R);
 	static assert(hasLength!R);
@@ -107,7 +105,7 @@ import std.range, std.algorithm, std.functional, std.math;
 	size_t gap = range.length;
 	
 	// Comb sort
-	while(true)
+	while(gap > threshold)
 	{
 		gap /= shrinkFactor;
 		
@@ -115,8 +113,6 @@ import std.range, std.algorithm, std.functional, std.math;
 		{
 			swap(range[i], range[i - gap]);
 		}
-		
-		if(gap <= 32) break;
 	}
 	
 	// Gallop insertion sort
