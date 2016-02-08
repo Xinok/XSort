@@ -2,7 +2,7 @@
 
 XSort is a collection of sorting algorithms and related profiling tools implemented in the [D programming language](http://dlang.org/). All source code is available in the [public domain](https://en.wikipedia.org/wiki/Public_domain).
 
-**NOTICE:** This repository is undergoing a gradual transition to a new format. As such, there may be some inconsistencies or missing information.
+**NOTICE:** This repository is undergoing a gradual transition to a new format. As such, there may be some inconsistencies or missing information. Check out older commits for the [old README](https://github.com/Xinok/XSort/blob/6cb67df980505bf0d508f01edbb7a0d9d33ad8d6/README.md) and [benchsort.d](https://github.com/Xinok/XSort/blob/6cb67df980505bf0d508f01edbb7a0d9d33ad8d6/benchsort.d) tool.
 
 ## Algorithms ##
 
