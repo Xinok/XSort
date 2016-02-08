@@ -1,5 +1,5 @@
-# Bubble Sort #
- [Selection sort](https://en.wikipedia.org/wiki/Selection_sort) is one of the most basic sorting algorithms. It's often used as a tool to introduce beginning programmers about sorting algorithms or algorithms in general.  Compared to bubble sort, it does significantly less I/O. Otherwise, selection sort has poor performance characteristics so it's not a good algorithm to use in practice.
+# [Selection Sort](./selectionsort.d) #
+ [Selection sort](https://en.wikipedia.org/wiki/Selection_sort) is one of the most basic sorting algorithms. It's often used as a tool to introduce beginning programmers to sorting algorithms. Compared to bubble sort, selection sort performs significantly less I/O in the average case. Otherwise, selection sort has poor performance characteristics so it's not a good algorithm to use in practice.
 
 Also see [bubble sort](https://en.wikipedia.org/wiki/Bubble_sort) and [insertion sort](https://en.wikipedia.org/wiki/Insertion_sort).
 
@@ -7,6 +7,7 @@ Also see [bubble sort](https://en.wikipedia.org/wiki/Bubble_sort) and [insertion
 - Unstable
 - O(n^2) time complexity
 - O(1) space complexity
+- O(n) swaps
 
 ## Implementation ##
 The implementation is written to work with any forward range with assignable or ref-able elements, such as [std.container:SList](http://dlang.org/phobos/std_container.html#.SList).

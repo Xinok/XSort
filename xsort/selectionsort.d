@@ -19,8 +19,8 @@ import std.range, std.algorithm, std.functional;
 void selectionSort(alias LessFun = "a < b", Range)(Range r)
 {
     static assert(isForwardRange!Range);
-	static assert(!isInfinite!Range);
-	static assert(hasAssignableElements!Range
+    static assert(!isInfinite!Range);
+    static assert(hasAssignableElements!Range
                || hasSwappableElements!Range);
     
     SelectionSortImpl!(Range, LessFun).sort(r);
@@ -45,16 +45,16 @@ unittest
 template SelectionSortImpl(Range, alias LessFun)
 {
     static assert(isForwardRange!Range);
-	static assert(!isInfinite!Range);
-	static assert(hasAssignableElements!Range ||
+    static assert(!isInfinite!Range);
+    static assert(hasAssignableElements!Range ||
                   hasSwappableElements!Range);
     
     alias ElementType!Range Element;
     
     alias binaryFun!LessFun less;
-	// bool greater(T a, T b){ return less(b, a); }
-	// bool greaterEqual(T a, T b){ return !less(a, b); }
-	// bool lessEqual(T a, T b){ return !less(b, a); };
+    // bool greater(T a, T b){ return less(b, a); }
+    // bool greaterEqual(T a, T b){ return !less(a, b); }
+    // bool lessEqual(T a, T b){ return !less(b, a); };
     
     void sort(Range r)
     {
@@ -75,16 +75,16 @@ template SelectionSortImpl(Range, alias LessFun)
     }
     
     // Swap front elements of two forward ranges
-	void swapFront(Range a, Range b)
-	{
-		static if(hasSwappableElements!Range) swap(a.front, b.front);
-		else
-		{
-			auto o = a.front;
-			a.front = b.front;
-			b.front = o;
-		}
-	}
+    void swapFront(Range a, Range b)
+    {
+        static if(hasSwappableElements!Range) swap(a.front, b.front);
+        else
+        {
+            auto o = a.front;
+            a.front = b.front;
+            b.front = o;
+        }
+    }
 }
 
 unittest

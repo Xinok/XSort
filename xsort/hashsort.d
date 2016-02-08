@@ -41,7 +41,7 @@ template HashSortImpl(Range, alias LessFun)
 {
     static assert(isRandomAccessRange!Range);
     static assert(hasLength!Range);
-	static assert(hasAssignableElements!Range || hasSwappableElements!Range);
+    static assert(hasAssignableElements!Range || hasSwappableElements!Range);
     static assert(isKeyType!Element);
     
     enum isKeyType(T) = __traits(compiles, size_t[T]);
@@ -71,8 +71,9 @@ template HashSortImpl(Range, alias LessFun)
         foreach(i, ref e; indices) e = counter[r[i]]++;
         
         version(unittest)
+        for(__gshared runOnce = true; runOnce && r.length >= 16; runOnce = false)
         {
-            // Checks that there are no repeats in indices
+            // Checks that all values in indices are distinct
             bool[] flags;
             flags.length = r.length;
             foreach(i; indices) flags[i] = true;
@@ -84,14 +85,13 @@ template HashSortImpl(Range, alias LessFun)
         foreach(a; 0 .. r.length)
         {
             size_t b = indices[a];
-            if(a == b) continue;
             
-            do
+            while(a != b)
             {
                 swapAt(r, a, b);
                 swapAt(indices, a, b);
                 b = indices[a];
-            } while(b != a);
+            }
         }
     }
     

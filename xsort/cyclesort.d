@@ -20,8 +20,8 @@ import std.range, std.algorithm, std.functional;
 void cycleSort(alias LessFun = "a < b", Range)(Range r)
 {
     static assert(isForwardRange!Range);
-	static assert(!isInfinite!Range);
-	static assert(hasAssignableElements!Range);
+    static assert(!isInfinite!Range);
+    static assert(hasAssignableElements!Range);
     
     CycleSortImpl!(Range, LessFun).sort(r);
     
@@ -45,8 +45,8 @@ unittest
 template CycleSortImpl(Range, alias LessFun)
 {
     static assert(isForwardRange!Range);
-	static assert(!isInfinite!Range);
-	static assert(hasAssignableElements!Range);
+    static assert(!isInfinite!Range);
+    static assert(hasAssignableElements!Range);
     
     alias ElementType!Range Element;
     alias binaryFun!LessFun less;
