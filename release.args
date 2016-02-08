@@ -1,6 +1,0 @@
-@build.args
--release
--O
--inline
--quiet
--boundscheck=off
