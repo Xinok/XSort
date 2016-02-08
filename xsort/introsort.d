@@ -162,7 +162,7 @@ template IntroSortImpl(alias pred, R)
             
             // Initialize index variables
             lef = 3;
-            rig = range.length - 2;
+            rig = range.length - 3;
         }
         
         // Initialize pivot
@@ -256,7 +256,7 @@ template IntroSortImpl(alias pred, R)
         else if(less(c, b)) swap(b, c);
     }
     
-    /// A simple insertion sort used for sorting small sublists
+    /// Insertion sort is used for sorting small sublists
     void insertionSort(R range)
     {
         size_t lower, upper, center;
